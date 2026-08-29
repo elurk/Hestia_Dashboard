@@ -39,6 +39,13 @@ declare -A PATCH_MAP=(
     ["list_dashboard.php"]="/usr/local/hestia/web/templates/pages/list_dashboard.php"
     ["dashboard_index.php"]="/usr/local/hestia/web/list/dashboard/index.php"
     ["dashboard_toggle.php"]="/usr/local/hestia/web/list/dashboard/toggle.php"
+    # Pestanas admin (Security + WordPress)
+    ["webpages/security/index.php"]="/usr/local/hestia/web/list/security/index.php"
+    ["webpages/security/action.php"]="/usr/local/hestia/web/list/security/action.php"
+    ["webpages/security/list_security.php"]="/usr/local/hestia/web/templates/pages/list_security.php"
+    ["webpages/wp/index.php"]="/usr/local/hestia/web/list/wp/index.php"
+    ["webpages/wp/action.php"]="/usr/local/hestia/web/list/wp/action.php"
+    ["webpages/wp/list_wp.php"]="/usr/local/hestia/web/templates/pages/list_wp.php"
 )
 
 if [ ! -d "$SRC_DIR" ]; then

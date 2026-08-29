@@ -1,0 +1,94 @@
+#!/bin/bash
+# v-fail2ban-action  -  Wrapper acotado sobre fail2ban-client para la UI.
+#
+# Se ejecuta como root via sudo desde el panel (hestiaweb). Concede SOLO estas
+# acciones, validando las entradas, en vez de dar acceso a fail2ban-client
+# entero. Salida en JSON para consumo desde PHP.
+#
+# Subcomandos:
+#   list                      -> JSON con jails y sus IPs baneadas
+#   unban <jail> <ip>         -> desbanea una IP de un jail
+#   whitelist-add <ip>        -> anade una IP al ignoreip persistente de Elurk
+#   blacklist-add <ip>        -> bloquea una IP en el firewall de Hestia (DROP)
+#
+# El archivo de whitelist es el mismo que despliega la plantilla de fail2ban:
+#   /etc/fail2ban/jail.d/zzz-elurk-overrides.local
+# La lista negra usa el firewall de Hestia (v-add-firewall-rule), asi que es
+# persistente y reversible desde Server -> Firewall.
+
+set -u
+WL_FILE="/etc/fail2ban/jail.d/zzz-elurk-overrides.local"
+
+json_err() { echo "{\"ok\":false,\"error\":\"$1\"}"; exit 0; }
+
+# Validaciones estrictas de entrada
+valid_ip() {
+    echo "$1" | grep -qE '^([0-9]{1,3}\.){3}[0-9]{1,3}(/[0-9]{1,2})?$|^([0-9a-fA-F:]+)(/[0-9]{1,3})?$'
+}
+valid_jail() { echo "$1" | grep -qE '^[a-zA-Z0-9_.-]{1,32}$'; }
+
+cmd="${1:-}"
+
+case "$cmd" in
+    list)
+        command -v fail2ban-client >/dev/null 2>&1 || json_err "fail2ban no instalado"
+        jails=$(fail2ban-client status 2>/dev/null | sed -n 's/.*Jail list:\s*//p' | tr ',' '\n' | sed 's/^\s*//;s/\s*$//' | grep -v '^$')
+        out="{\"ok\":true,\"jails\":["
+        first=1
+        for j in $jails; do
+            ips=$(fail2ban-client status "$j" 2>/dev/null | sed -n 's/.*Banned IP list:\s*//p')
+            ip_json=""
+            for ip in $ips; do
+                [ -n "$ip_json" ] && ip_json="$ip_json,"
+                ip_json="$ip_json\"$ip\""
+            done
+            [ $first -eq 0 ] && out="$out,"
+            out="$out{\"jail\":\"$j\",\"banned\":[$ip_json]}"
+            first=0
+        done
+        echo "$out]}"
+        ;;
+    unban)
+        jail="${2:-}"; ip="${3:-}"
+        valid_jail "$jail" || json_err "jail invalido"
+        valid_ip "$ip"     || json_err "ip invalida"
+        if fail2ban-client set "$jail" unbanip "$ip" >/dev/null 2>&1; then
+            echo "{\"ok\":true,\"unbanned\":\"$ip\",\"jail\":\"$jail\"}"
+        else
+            json_err "no se pudo desbanear"
+        fi
+        ;;
+    whitelist-add)
+        ip="${2:-}"
+        valid_ip "$ip" || json_err "ip invalida"
+        [ -f "$WL_FILE" ] || json_err "falta $WL_FILE (aplica la plantilla de fail2ban primero)"
+        # Anadir a la linea ignoreip si no esta ya
+        if grep -qE "^\s*ignoreip\s*=" "$WL_FILE"; then
+            if grep -E "^\s*ignoreip\s*=" "$WL_FILE" | grep -qw "$ip"; then
+                echo "{\"ok\":true,\"note\":\"ya estaba en la whitelist\"}"
+                exit 0
+            fi
+            sed -i "s|^\(\s*ignoreip\s*=.*\)|\1 $ip|" "$WL_FILE"
+        else
+            echo "ignoreip = 127.0.0.1/8 ::1 $ip" >> "$WL_FILE"
+        fi
+        fail2ban-client reload >/dev/null 2>&1
+        echo "{\"ok\":true,\"whitelisted\":\"$ip\"}"
+        ;;
+    blacklist-add)
+        ip="${2:-}"
+        valid_ip "$ip" || json_err "ip invalida"
+        command -v v-add-firewall-rule >/dev/null 2>&1 || json_err "firewall de Hestia no disponible"
+        # DROP de todo el trafico de esa IP. PORT '0' = cualquier puerto en
+        # Hestia. Queda visible y reversible en Server -> Firewall.
+        # NOTA: verificar semantica exacta de PORT en el lab de tu version.
+        if v-add-firewall-rule DROP "$ip" 0 TCP 'Blacklist (Dashboard Manager)' >/dev/null 2>&1; then
+            echo "{\"ok\":true,\"blacklisted\":\"$ip\"}"
+        else
+            json_err "no se pudo anadir la regla de firewall"
+        fi
+        ;;
+    *)
+        json_err "subcomando desconocido"
+        ;;
+esac

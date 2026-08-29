@@ -1,0 +1,62 @@
+#!/bin/bash
+# v-wp-manage  -  Deteccion y hardening de WordPress para la UI del panel.
+#
+# Se ejecuta como root via sudo desde el panel. Concede SOLO estas acciones:
+#   list                    -> JSON con los WordPress detectados en todos los sitios
+#   harden <user> <domain>  -> hestia-wp-harden sobre ese sitio
+#   scan   <user> <domain>  -> hestia-wp-harden --scan sobre ese sitio
+#
+# Deteccion como root evita los problemas de permisos de hestiaweb sobre los
+# directorios /home de otros usuarios.
+
+set -u
+HARDEN_BIN="/usr/local/hestia/bin/hestia-wp-harden"
+
+json_err() { echo "{\"ok\":false,\"error\":\"$1\"}"; exit 0; }
+valid_name() { echo "$1" | grep -qE '^[a-zA-Z0-9._-]{1,64}$'; }
+
+cmd="${1:-}"
+
+case "$cmd" in
+    list)
+        users=$(v-list-users plain 2>/dev/null | awk '{print $1}')
+        out="{\"ok\":true,\"sites\":["
+        first=1
+        for u in $users; do
+            domains=$(v-list-web-domains "$u" plain 2>/dev/null | awk '{print $1}')
+            for d in $domains; do
+                docroot="/home/$u/web/$d/public_html"
+                [ -f "$docroot/wp-config.php" ] || continue
+                [ -d "$docroot/wp-includes" ] || continue
+                # Endurecido si wp-config ya tiene DISALLOW_FILE_EDIT
+                hardened="false"
+                grep -q "DISALLOW_FILE_EDIT" "$docroot/wp-config.php" 2>/dev/null && hardened="true"
+                [ $first -eq 0 ] && out="$out,"
+                out="$out{\"user\":\"$u\",\"domain\":\"$d\",\"hardened\":$hardened}"
+                first=0
+            done
+        done
+        echo "$out]}"
+        ;;
+    harden|scan)
+        u="${2:-}"; d="${3:-}"
+        valid_name "$u" || json_err "usuario invalido"
+        valid_name "$d" || json_err "dominio invalido"
+        [ -x "$HARDEN_BIN" ] || json_err "falta hestia-wp-harden"
+        extra=""
+        [ "$cmd" = "scan" ] && extra="--scan"
+        if "$HARDEN_BIN" --user "$u" --domain "$d" $extra >/tmp/wpharden.$$ 2>&1; then
+            # Devolver ok + ultimas lineas del log como resumen
+            summary=$(tail -c 500 /tmp/wpharden.$$ | tr '\n' ' ' | sed 's/"/\\"/g')
+            rm -f /tmp/wpharden.$$
+            echo "{\"ok\":true,\"summary\":\"$summary\"}"
+        else
+            summary=$(tail -c 500 /tmp/wpharden.$$ | tr '\n' ' ' | sed 's/"/\\"/g')
+            rm -f /tmp/wpharden.$$
+            echo "{\"ok\":false,\"error\":\"$summary\"}"
+        fi
+        ;;
+    *)
+        json_err "subcomando desconocido"
+        ;;
+esac

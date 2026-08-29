@@ -463,6 +463,22 @@
 					<?php } ?>
 				<?php } ?>
 
+				<!-- Security (Fail2ban) tab - Dashboard Manager, admin only -->
+				<?php if (($_SESSION["userContext"] ?? "") === "admin") { ?>
+					<li class="main-menu-item">
+						<a class="main-menu-item-link <?php if ($TAB == "SECURITY") { echo "active"; } ?>" href="/list/security/" title="<?= _("Security") ?>: Fail2ban">
+							<p class="main-menu-item-label"><?= _("Security") ?><i class="fas fa-shield-halved"></i></p>
+						</a>
+					</li>
+
+					<!-- WordPress tab - Dashboard Manager, admin only -->
+					<li class="main-menu-item">
+						<a class="main-menu-item-link <?php if ($TAB == "WORDPRESS") { echo "active"; } ?>" href="/list/wp/" title="WordPress">
+							<p class="main-menu-item-label">WordPress<i class="fab fa-wordpress"></i></p>
+						</a>
+					</li>
+				<?php } ?>
+
 			</ul>
 		</div>
 	</nav>

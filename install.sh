@@ -308,6 +308,12 @@ install_update_protection() {
     if [ -f "$SCRIPT_DIR/themes/dark_glass_theme/pages/list_dashboard.php" ]; then
         cp "$SCRIPT_DIR/themes/dark_glass_theme/pages/list_dashboard.php" "$src_dir/list_dashboard.php"
     fi
+    # Pestanas admin (Security + WordPress): controladores y plantillas, para
+    # que la proteccion anti-updates las reaplique si un update de Hestia
+    # revierte panel.php (menu) o resetea templates/pages/.
+    if [ -d "$SCRIPT_DIR/webpages" ]; then
+        cp -r "$SCRIPT_DIR/webpages" "$src_dir/"
+    fi
     chown -R hestiaweb:hestiaweb "$src_dir" 2>/dev/null || true
     find "$src_dir" -type d -exec chmod 755 {} \;
     find "$src_dir" -type f -exec chmod 644 {} \;
@@ -335,6 +341,48 @@ DPkg::Post-Invoke { "if [ -x /usr/local/hestia/bin/hestia-theme-reapply ]; then 
 EOF
     chmod 644 "$hook"
     print_status "Installed APT hook: $hook"
+}
+
+# Function to install the admin tabs (Security/Fail2ban + WordPress)
+install_admin_tabs() {
+    print_status "Installing admin tabs (Security + WordPress)..."
+
+    # Controladores y endpoints de cada pestana -> web/list/<tab>/
+    for tab in security wp; do
+        local src="$SCRIPT_DIR/webpages/$tab"
+        local dst="/usr/local/hestia/web/list/$tab"
+        if [ -d "$src" ]; then
+            mkdir -p "$dst"
+            cp "$src/index.php"  "$dst/index.php"
+            cp "$src/action.php" "$dst/action.php"
+            chown -R hestiaweb:hestiaweb "$dst"
+            find "$dst" -type f -exec chmod 644 {} \;
+            chmod 755 "$dst"
+            print_status "Installed tab controller: /list/$tab/"
+        else
+            print_warning "Tab source not found: $src"
+        fi
+    done
+
+    # Plantillas de pagina -> templates/pages/
+    local pages="/usr/local/hestia/web/templates/pages"
+    if [ -d "$pages" ]; then
+        cp "$SCRIPT_DIR/webpages/security/list_security.php" "$pages/list_security.php" 2>/dev/null || true
+        cp "$SCRIPT_DIR/webpages/wp/list_wp.php"             "$pages/list_wp.php"       2>/dev/null || true
+        chown hestiaweb:hestiaweb "$pages/list_security.php" "$pages/list_wp.php" 2>/dev/null || true
+        chmod 644 "$pages/list_security.php" "$pages/list_wp.php" 2>/dev/null || true
+        print_status "Installed page templates: list_security.php, list_wp.php"
+    fi
+
+    # Wrappers de backend acotados -> bin/
+    for wrapper in v-fail2ban-action v-wp-manage hestia-wp-harden; do
+        if [ -f "$SCRIPT_DIR/bin/$wrapper" ]; then
+            cp "$SCRIPT_DIR/bin/$wrapper" "$BIN_DIR/$wrapper"
+            chown root:root "$BIN_DIR/$wrapper"
+            chmod 755 "$BIN_DIR/$wrapper"
+            print_status "Installed backend wrapper: $wrapper"
+        fi
+    done
 }
 
 # Function to install theme CSS files
@@ -582,6 +630,8 @@ configure_sudo_permissions() {
 # Hestia Theme Manager - Allow web user to execute theme change scripts
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/hestia/bin/v-change-user-theme
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/hestia/bin/v-change-user-css-theme
+$WEB_USER ALL=(root) NOPASSWD: /usr/local/hestia/bin/v-fail2ban-action
+$WEB_USER ALL=(root) NOPASSWD: /usr/local/hestia/bin/v-wp-manage
 EOF
     
     chmod 440 "$SUDOERS_FILE"
@@ -911,6 +961,7 @@ main() {
     create_cli_command
     create_theme_guide
     setup_logrotate
+    install_admin_tabs
     install_update_protection
 
     show_summary

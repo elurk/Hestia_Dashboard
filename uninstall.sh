@@ -433,6 +433,35 @@ remove_cli_command() {
     fi
 }
 
+# Function to remove admin tabs (Security + WordPress) and their backends
+remove_admin_tabs() {
+    print_status "Removing admin tabs (Security + WordPress)..."
+
+    for tab in security wp; do
+        if [ -d "/usr/local/hestia/web/list/$tab" ]; then
+            rm -rf "/usr/local/hestia/web/list/$tab"
+            print_status "Removed tab: /list/$tab/"
+        fi
+    done
+
+    for tpl in list_security.php list_wp.php; do
+        if [ -f "/usr/local/hestia/web/templates/pages/$tpl" ]; then
+            rm -f "/usr/local/hestia/web/templates/pages/$tpl"
+        fi
+    done
+
+    for wrapper in v-fail2ban-action v-wp-manage hestia-wp-harden; do
+        if [ -f "$BIN_DIR/$wrapper" ]; then
+            rm -f "$BIN_DIR/$wrapper"
+            print_status "Removed backend wrapper: $wrapper"
+        fi
+    done
+
+    # NO se tocan las reglas de firewall (lista negra) ni el ignoreip (lista
+    # blanca) que hayas creado: son configuracion de seguridad tuya, no del
+    # plugin. Se gestionan en Server -> Firewall y en jail.d/.
+}
+
 # Function to remove update protection (reapply script + APT hook)
 remove_update_protection() {
     print_status "Removing update protection..."
@@ -553,6 +582,7 @@ force_uninstall() {
     remove_sudo_permissions
     remove_theme_log
     remove_cli_command
+    remove_admin_tabs
     remove_update_protection
     remove_logrotate
 
@@ -593,6 +623,7 @@ main() {
     remove_sudo_permissions
     remove_theme_log
     remove_cli_command
+    remove_admin_tabs
     remove_update_protection
     remove_logrotate
     remove_plugin_directory
