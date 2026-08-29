@@ -1,0 +1,142 @@
+#!/bin/bash
+# hestia-wp-harden  -  Hardening de WordPress para sitios alojados en HestiaCP
+#
+# Aplica el endurecimiento basico que en Plesk hace el "WordPress Toolkit":
+#   - Propietario correcto (el usuario del sitio, no root ni www-data)
+#   - Permisos: directorios 755, ficheros 644, wp-config.php 640
+#   - wp-config.php: DISALLOW_FILE_EDIT y DISALLOW_FILE_MODS
+#   - Bloqueo de ejecucion de PHP en uploads (vector de subida maliciosa)
+#   - Proteccion de wp-config.php y xmlrpc.php (Apache .htaccess / snippet nginx)
+#   - (Opcional) escaneo de vulnerabilidades si wordfence CLI esta instalado
+#
+# USO:
+#   hestia-wp-harden --user <USUARIO_HESTIA> --domain <DOMINIO> [--dry-run]
+#   hestia-wp-harden --path /home/<user>/web/<domain>/public_html [--dry-run]
+#
+#   --dry-run   Muestra lo que haria SIN cambiar nada. Empieza siempre por aqui.
+#   --scan      Ademas, lanza wordfence CLI si esta disponible.
+#
+# SEGURIDAD: solo actua si detecta un WordPress real (wp-config.php + wp-includes)
+# y si la ruta esta bajo /home/*/web/*/public_html, para no tocar nada fuera.
+
+set -u
+
+USER_ARG=""; DOMAIN_ARG=""; PATH_ARG=""; DRY=0; SCAN=0
+
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --user)   USER_ARG="$2"; shift 2 ;;
+        --domain) DOMAIN_ARG="$2"; shift 2 ;;
+        --path)   PATH_ARG="$2"; shift 2 ;;
+        --dry-run) DRY=1; shift ;;
+        --scan)   SCAN=1; shift ;;
+        *) echo "Argumento desconocido: $1"; exit 1 ;;
+    esac
+done
+
+err()  { echo "ERROR: $*" >&2; exit 1; }
+info() { echo "  $*"; }
+run()  { if [ "$DRY" -eq 1 ]; then echo "  [dry-run] $*"; else eval "$*"; fi; }
+
+# --- Resolver docroot y usuario del sitio ---
+if [ -n "$PATH_ARG" ]; then
+    DOCROOT="$PATH_ARG"
+    # Derivar usuario de la ruta /home/<user>/web/...
+    SITE_USER=$(echo "$DOCROOT" | sed -n 's|^/home/\([^/]*\)/web/.*|\1|p')
+elif [ -n "$USER_ARG" ] && [ -n "$DOMAIN_ARG" ]; then
+    DOCROOT="/home/$USER_ARG/web/$DOMAIN_ARG/public_html"
+    SITE_USER="$USER_ARG"
+else
+    err "Indica --path, o bien --user y --domain. Usa --dry-run para probar."
+fi
+
+# --- Guardas de seguridad ---
+case "$DOCROOT" in
+    /home/*/web/*/public_html|/home/*/web/*/public_html/) : ;;
+    *) err "Ruta fuera de lo esperado ($DOCROOT). Debe estar bajo /home/<user>/web/<dominio>/public_html" ;;
+esac
+[ -d "$DOCROOT" ] || err "No existe el directorio: $DOCROOT"
+[ -f "$DOCROOT/wp-config.php" ] || err "No parece WordPress: falta wp-config.php en $DOCROOT"
+[ -d "$DOCROOT/wp-includes" ]   || err "No parece WordPress: falta wp-includes en $DOCROOT"
+[ -n "$SITE_USER" ] || err "No he podido determinar el usuario del sitio."
+id "$SITE_USER" >/dev/null 2>&1 || err "El usuario '$SITE_USER' no existe en el sistema."
+
+echo "== hestia-wp-harden =="
+echo "Docroot: $DOCROOT"
+echo "Usuario del sitio: $SITE_USER"
+[ "$DRY" -eq 1 ] && echo "MODO DRY-RUN: no se cambiara nada." || echo "MODO REAL: se aplicaran cambios."
+echo
+
+# --- 1. Propietario correcto ---
+echo "[1/5] Propietario -> $SITE_USER:$SITE_USER"
+run "chown -R '$SITE_USER':'$SITE_USER' '$DOCROOT'"
+
+# --- 2. Permisos ---
+echo "[2/5] Permisos: dirs 755, ficheros 644, wp-config.php 640"
+run "find '$DOCROOT' -type d -exec chmod 755 {} +"
+run "find '$DOCROOT' -type f -exec chmod 644 {} +"
+run "chmod 640 '$DOCROOT/wp-config.php'"
+
+# --- 3. wp-config.php: endurecer constantes ---
+echo "[3/5] wp-config.php: DISALLOW_FILE_EDIT y DISALLOW_FILE_MODS"
+WPCFG="$DOCROOT/wp-config.php"
+for const in DISALLOW_FILE_EDIT DISALLOW_FILE_MODS; do
+    if grep -q "define( *['\"]$const['\"]" "$WPCFG"; then
+        info "$const ya presente, no se toca"
+    else
+        line="define('$const', true);"
+        if [ "$DRY" -eq 1 ]; then
+            echo "  [dry-run] insertar en wp-config.php: $line"
+        else
+            # Insertar antes de la linea que pide no editar mas abajo
+            if grep -q "Happy publishing\|stop editing\|Eso es todo" "$WPCFG"; then
+                sed -i "/Happy publishing\|stop editing\|Eso es todo/i $line" "$WPCFG"
+            else
+                # Fallback: tras la apertura <?php
+                sed -i "0,/^<?php/s//<?php\n$line/" "$WPCFG"
+            fi
+            info "Insertado: $line"
+        fi
+    fi
+done
+
+# --- 4. Bloqueo de PHP en uploads ---
+echo "[4/5] Bloqueo de ejecucion de PHP en wp-content/uploads"
+UPLOADS="$DOCROOT/wp-content/uploads"
+if [ -d "$UPLOADS" ] || [ "$DRY" -eq 1 ]; then
+    HT="$UPLOADS/.htaccess"
+    if [ "$DRY" -eq 1 ]; then
+        echo "  [dry-run] escribir $HT con 'Deny' de *.php (efectivo en Apache)"
+    else
+        mkdir -p "$UPLOADS"
+        cat > "$HT" << 'HTEOF'
+# Bloquea ejecucion de PHP subido a uploads (Apache).
+<Files *.php>
+    Require all denied
+</Files>
+HTEOF
+        chown "$SITE_USER":"$SITE_USER" "$HT"
+        chmod 644 "$HT"
+        info "Escrito $HT"
+    fi
+    echo "  NOTA nginx: si el sitio usa nginx, anade en su template una location:"
+    echo "        location ~* /wp-content/uploads/.*\\.php\$ { deny all; }"
+else
+    info "No hay carpeta uploads todavia; se omite"
+fi
+
+# --- 5. Escaneo opcional de vulnerabilidades ---
+echo "[5/5] Escaneo de vulnerabilidades"
+if [ "$SCAN" -eq 1 ]; then
+    if command -v wordfence >/dev/null 2>&1; then
+        echo "  Lanzando wordfence CLI (malware + vulnerabilidades)..."
+        run "wordfence scan '$DOCROOT'"
+    else
+        info "wordfence CLI no instalado; omito. (Integracion opcional recomendada.)"
+    fi
+else
+    info "Sin --scan; omito. Anade --scan para lanzar wordfence CLI si esta instalado."
+fi
+
+echo
+echo "Hecho.$([ "$DRY" -eq 1 ] && echo ' (dry-run: no se cambio nada)')"

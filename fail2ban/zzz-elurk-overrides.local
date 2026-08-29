@@ -1,0 +1,75 @@
+# /etc/fail2ban/jail.d/zzz-elurk-overrides.local
+#
+# Overrides de fail2ban para HestiaCP con dos objetivos:
+#   1. No banear a clientes legitimos que fallan la contrasena del correo
+#      varias veces (el dolor tipico: "no puedo entrar al webmail").
+#   2. Mantener duros los vectores de ataque reales (SSH y login del panel).
+#
+# POR QUE ESTE ARCHIVO Y NO EDITAR jail.local:
+#   fail2ban carga primero los .conf (jail.conf, jail.d/*.conf) y DESPUES los
+#   .local (jail.local, jail.d/*.local en orden alfabetico). El prefijo "zzz-"
+#   garantiza que este archivo se lee el ultimo y sus valores ganan, sin tocar
+#   la configuracion que instala Hestia. Para revertir, basta con borrarlo.
+#
+# APLICAR:
+#   cp zzz-elurk-overrides.local /etc/fail2ban/jail.d/
+#   # edita ignoreip abajo con las IPs fijas de tus clientes
+#   systemctl restart fail2ban
+#   fail2ban-client status          # ver jails activos
+#   fail2ban-client status <jail>   # ver baneados de un jail
+
+[DEFAULT]
+# Lista blanca: estas IPs NUNCA se banean. Mete aqui tu oficina y las IPs
+# fijas de clientes de confianza (separadas por espacios). Acepta IPs y CIDR.
+# 127.0.0.1/8 y ::1 imprescindibles para no autobloquearte.
+ignoreip = 127.0.0.1/8 ::1
+# ejemplo: ignoreip = 127.0.0.1/8 ::1 90.100.110.120 90.100.110.121 88.20.0.0/16
+
+# Ventana de observacion y castigo por defecto (razonables para humanos).
+findtime = 10m
+bantime  = 30m
+# Baneos progresivos: cada reincidencia dura mas (2x, 4x...). Frena al bot
+# insistente sin castigar de por vida al cliente despistado.
+bantime.increment = true
+bantime.factor    = 2
+bantime.maxtime   = 24h
+
+
+# -------- CORREO: indulgente (clientes humanos que prueban contrasenas) ------
+# Nombres de jail segun los que activa Hestia. Si tu instalacion no tiene
+# alguno, fail2ban simplemente ignora esa seccion (no da error).
+
+[dovecot]
+enabled  = true
+maxretry = 6
+findtime = 10m
+bantime  = 10m
+
+[exim]
+enabled  = true
+maxretry = 6
+findtime = 10m
+bantime  = 10m
+
+[sasl]
+enabled  = true
+maxretry = 6
+findtime = 10m
+bantime  = 10m
+
+
+# -------- ACCESOS SENSIBLES: duros (aqui casi todo es ataque) ----------------
+
+[sshd]
+enabled  = true
+maxretry = 3
+findtime = 10m
+bantime  = 2h
+
+# Login del panel de Hestia. El filtro se llama "hestia" en instalaciones
+# estandar. Un fallo repetido aqui rara vez es un cliente torpe.
+[hestia]
+enabled  = true
+maxretry = 3
+findtime = 10m
+bantime  = 2h
