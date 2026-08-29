@@ -21,48 +21,48 @@ verificar `v-add-firewall-rule` (blacklist).
 
 ---
 
-## Fase 2 — Tras el lab (paridad Plesk, por valor)
+## Fase 2 — Tras el lab (victorias rápidas, mismo patrón wrapper+pestaña)
 
-Todas siguen el mismo patrón probado: wrapper CLI acotado + pestaña gráfica.
+Primero rematar Fase 1 en el lab (CSS, lint PHP), luego estas, que son las
+más baratas y de uso diario:
 
-### Alta prioridad (uso diario, muy pedido)
-- [ ] **Seguimiento de correo** (equivalente a "Track Email Delivery" de Plesk).
-      Parsea el log de Exim (`mainlog`): estado por mensaje (Sent/Deferred/Failed),
-      remitente, destinatario, tamaño, detalle de entrega. Acciones: reenviar
-      (`exim -M`), borrar (`exim -Mrm`). NO confundir con Mail Queue (solo atascados).
 - [ ] **Visor de logs multi-servicio**: desplegable Apache / Nginx / PHP-FPM /
       Exim / Fail2ban con filtro y búsqueda rápida. Wrapper que lee los logs.
-- [ ] **Vista por dominio con pestañas** (Mail / Files / Databases / Statistics /
-      WordPress...) al estilo Plesk/cPanel. Núcleo del "tema familiar".
-
-### Media prioridad
-- [ ] **Mail Queue**: cola de Exim (`exim -bp` / `exiqgrep`), reintentar/vaciar.
 - [ ] **Services Management**: start/stop/restart de servicios desde el panel
       (`v-restart-service`), con estado en vivo.
 - [ ] **Diagnose & Repair / Salud del servidor**: envuelve los `v-check-*` de Hestia.
-- [ ] **ModSecurity WAF** en nginx: el gap de seguridad real. On/off + OWASP CRS.
-      El más costoso (hay que compilar/activar el conector en nginx de Hestia).
 
-### Baja prioridad / backlog
+### Backlog menor (cuando encaje)
 - [ ] Acceso directo a phpMyAdmin (el integrado, sin exponer root) desde el dashboard.
 - [ ] Auto-hardening de WordPress tras Quick Install (hook al flujo de Hestia).
-- [ ] Helper de despliegue de **Mautic** (`hestia-deploy-mautic`) + pestaña "Apps"
-      que detecte Mautic además de WordPress.
+- [ ] Helper de despliegue de **Mautic** (`hestia-deploy-mautic`) + pestaña "Apps".
 
 ### Descartado (peso enterprise sin retorno)
 - Advisor, Mass Email, Mailing Lists, Event Manager, Task Manager.
 
 ---
 
-## Fase 3 — Tema "familiar Plesk/cPanel"
+## Fase FINAL — Los grandes (decisión del usuario: al final)
 
-- [ ] Landing "Herramientas" tipo Tools & Settings: rejilla de tarjetas agrupadas
-      (Seguridad / Correo / Dominios / Bases de datos / Servidor) con vocabulario
-      reconocible, enlazando a funciones reales de Hestia y a nuestras pestañas.
-- [ ] Vista por dominio con pestañas (ver Fase 2).
-- Sin clonar la marca de Plesk/cPanel (legal + mantenimiento): familiar, no copia.
+Bloque de cierre, lo más vistoso y costoso, se hace cuando el resto esté sólido:
 
-## Fase 4 — Publicar
+- [ ] **Seguimiento de correo** (equivalente a "Track Email Delivery" de Plesk).
+      Parsea el log de Exim (`mainlog`): estado por mensaje (Sent/Deferred/Failed),
+      remitente, destinatario, tamaño, detalle de entrega. Acciones: reenviar
+      (`exim -M`), borrar (`exim -Mrm`). NO confundir con Mail Queue (solo atascados).
+- [ ] **Mail Queue**: cola de Exim (`exim -bp` / `exiqgrep`), reintentar/vaciar.
+- [ ] **ModSecurity WAF** en nginx: el gap de seguridad real. On/off + OWASP CRS.
+      El más costoso (hay que compilar/activar el conector en nginx de Hestia).
+- [ ] **Vista por dominio con pestañas** (Mail / Files / Databases / Statistics /
+      WordPress...) al estilo Plesk/cPanel.
+- [ ] **Temas Plesk y cPanel intercambiables a un clic**: NO es un desarrollo
+      aparte — se añaden como dos temas más al selector que YA tiene el Dashboard
+      Manager (junto a glass, panel...). El usuario elige look Plesk o look cPanel
+      con un clic, como hoy cambia de color. Familiar, no clon (legal+mantenimiento).
+      La landing "Herramientas" (rejilla Tools & Settings) y la vista por dominio
+      son parte de estos temas.
+
+## Fase publicar
 
 - [ ] README con capturas, licencia, y (opcional) PR de mejoras selectas a upstream.
 - Objetivo: uso propio + GitHub si queda pulido. Diferencial: WP Toolkit soberano.
