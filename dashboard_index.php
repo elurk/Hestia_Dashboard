@@ -14,21 +14,32 @@ exec(HESTIA_CMD . "v-list-sys-services json", $output, $return_var);
 $allServices = json_decode(implode("", $output), true);
 unset($output);
 
-// Filter only the services you want
-$wanted = [
-    "apache2"      => "Apache",
-    "php8.3-fpm"   => "PHP 8.3",
-    "mariadb"      => "Database",
-    "exim4"        => "Mail",
-    "iptables"     => "Firewall"
-];
-
+// Detect services dynamically instead of hardcoding names. The old list
+// pinned "apache2" and "php8.3-fpm", which breaks on nginx-only installs and
+// on newer stacks (Hestia 1.10 / Ubuntu 26.04 ships PHP 8.5, so php8.3-fpm
+// does not exist and PHP always showed as "unknown"). Here we pick whatever
+// the box actually runs.
 $services = [];
-foreach ($wanted as $key => $label) {
-    if (isset($allServices[$key])) {
-        $services[$label] = $allServices[$key]['STATE'];
-    } else {
-        $services[$label] = "unknown"; // fallback
+$allKeys = is_array($allServices) ? array_keys($allServices) : [];
+
+// Web server: whichever of nginx/apache is present.
+foreach (["nginx" => "Nginx", "apache2" => "Apache"] as $svc => $label) {
+    if (isset($allServices[$svc])) {
+        $services[$label] = $allServices[$svc]["STATE"];
+    }
+}
+
+// PHP-FPM: match any phpX.Y-fpm service and label it with its version.
+foreach ($allKeys as $svc) {
+    if (preg_match('/^php(\d+\.\d+)-fpm$/', $svc, $m)) {
+        $services["PHP " . $m[1]] = $allServices[$svc]["STATE"];
+    }
+}
+
+// Fixed-name services that are stable across stacks.
+foreach (["mariadb" => "Database", "exim4" => "Mail", "iptables" => "Firewall"] as $svc => $label) {
+    if (isset($allServices[$svc])) {
+        $services[$label] = $allServices[$svc]["STATE"];
     }
 }
 
@@ -62,7 +73,7 @@ $ramUsageFormatted = "{$usedRam}MB / {$totalRam}MB ({$ramUsagePercent}%)";
 $serverTime = trim(shell_exec("date '+%H:%M'"));
 
 // Get latest 4 log entries
-exec(HESTIA_CMD . "v-list-user-log $user json", $output, $return_var);
+exec(HESTIA_CMD . "v-list-user-log " . quoteshellarg($user) . " json", $output, $return_var);
 $logs = json_decode(implode("", $output), true);
 unset($output);
 
