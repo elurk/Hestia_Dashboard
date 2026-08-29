@@ -291,6 +291,52 @@ copy_plugin_files() {
     print_status "Plugin files installed"
 }
 
+# Function to install update protection (survives Hestia apt upgrades)
+install_update_protection() {
+    print_status "Installing update protection (auto-reapply after Hestia upgrades)..."
+
+    local src_dir="$PLUGIN_DIR/reapply-src"
+    mkdir -p "$src_dir"
+
+    # Stage everything the reapply script needs, so it never depends on the
+    # cloned repo still being present on disk after install.
+    if [ -d "$SCRIPT_DIR/patch_files" ]; then
+        cp -r "$SCRIPT_DIR/patch_files" "$src_dir/"
+    fi
+    cp "$SCRIPT_DIR/dashboard_index.php"  "$src_dir/" 2>/dev/null || true
+    cp "$SCRIPT_DIR/dashboard_toggle.php" "$src_dir/" 2>/dev/null || true
+    if [ -f "$SCRIPT_DIR/themes/dark_glass_theme/pages/list_dashboard.php" ]; then
+        cp "$SCRIPT_DIR/themes/dark_glass_theme/pages/list_dashboard.php" "$src_dir/list_dashboard.php"
+    fi
+    chown -R hestiaweb:hestiaweb "$src_dir" 2>/dev/null || true
+    find "$src_dir" -type d -exec chmod 755 {} \;
+    find "$src_dir" -type f -exec chmod 644 {} \;
+
+    # Install the reapply script into Hestia's bin
+    if [ -f "$SCRIPT_DIR/bin/hestia-theme-reapply" ]; then
+        cp "$SCRIPT_DIR/bin/hestia-theme-reapply" "$BIN_DIR/hestia-theme-reapply"
+        chown root:root "$BIN_DIR/hestia-theme-reapply"
+        chmod 755 "$BIN_DIR/hestia-theme-reapply"
+        print_status "Installed $BIN_DIR/hestia-theme-reapply"
+    else
+        print_warning "Reapply script not found in repo; update protection incomplete"
+        return
+    fi
+
+    # APT hook: reaplica tras cualquier operacion de paquetes. El script es
+    # idempotente y barato (solo compara ficheros y sale) cuando no hay nada
+    # que hacer, asi que su coste en operaciones apt no relacionadas es minimo.
+    local hook="/etc/apt/apt.conf.d/99-hestia-theme-reapply"
+    cat > "$hook" << 'EOF'
+// Dashboard Manager: reaplica los parches del panel tras operaciones de apt/dpkg,
+// porque una actualizacion de Hestia restaura los archivos core a su version de
+// fabrica y desactiva el dashboard. El script es idempotente.
+DPkg::Post-Invoke { "if [ -x /usr/local/hestia/bin/hestia-theme-reapply ]; then /usr/local/hestia/bin/hestia-theme-reapply >/dev/null 2>&1 || true; fi"; };
+EOF
+    chmod 644 "$hook"
+    print_status "Installed APT hook: $hook"
+}
+
 # Function to install theme CSS files
 install_theme_css_files() {
     print_status "Installing theme CSS files..."
@@ -865,6 +911,7 @@ main() {
     create_cli_command
     create_theme_guide
     setup_logrotate
+    install_update_protection
 
     show_summary
 }

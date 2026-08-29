@@ -1,0 +1,119 @@
+#!/bin/bash
+# hestia-theme-reapply
+#
+# Reaplica los parches del Dashboard Manager sobre los archivos core de Hestia.
+# Pensado para ejecutarse automaticamente despues de cada actualizacion de
+# Hestia (via hook de APT), porque `apt` restaura los archivos core a su
+# version de fabrica y con ello desactiva el dashboard.
+#
+# Es idempotente: si un archivo ya coincide con nuestra version parcheada, no
+# hace nada. Solo actua cuando detecta que el archivo ha cambiado (tipicamente
+# porque una actualizacion lo revirtio).
+#
+# SALVAGUARDA: antes de sobrescribir un archivo core que ha cambiado, guarda la
+# copia actual (la nueva de Hestia) en post-update-stock/. Asi, si la
+# actualizacion de Hestia modifico ese archivo (p.ej. un fix de seguridad), esos
+# cambios quedan registrados para revisarlos, en vez de perderse en silencio.
+#
+# Todo lo que necesita para reaplicar vive en $SRC_DIR, depositado por
+# install.sh; este script NO depende de que el repositorio clonado siga presente.
+
+set -u
+
+PLUGIN_DIR="/usr/local/hestia/plugins/theme-manager"
+SRC_DIR="$PLUGIN_DIR/reapply-src"
+STOCK_DIR="$PLUGIN_DIR/post-update-stock"
+LOG="/var/log/hestia/theme-reapply.log"
+WEB_USER="hestiaweb"
+
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" >> "$LOG"; }
+
+# Mapa: archivo fuente en SRC_DIR  ->  destino core en Hestia
+declare -A PATCH_MAP=(
+    ["patch_files/web_index.php"]="/usr/local/hestia/web/index.php"
+    ["patch_files/list_index.php"]="/usr/local/hestia/web/list/index.php"
+    ["patch_files/main.php"]="/usr/local/hestia/web/inc/main.php"
+    ["patch_files/login_index.php"]="/usr/local/hestia/web/login/index.php"
+    ["patch_files/edit_server.php"]="/usr/local/hestia/web/templates/pages/edit_server.php"
+    ["patch_files/panel.php"]="/usr/local/hestia/web/templates/includes/panel.php"
+    ["list_dashboard.php"]="/usr/local/hestia/web/templates/pages/list_dashboard.php"
+    ["dashboard_index.php"]="/usr/local/hestia/web/list/dashboard/index.php"
+    ["dashboard_toggle.php"]="/usr/local/hestia/web/list/dashboard/toggle.php"
+)
+
+if [ ! -d "$SRC_DIR" ]; then
+    log "ERROR: no existe $SRC_DIR; ejecuta install.sh primero. Abortando."
+    exit 1
+fi
+
+mkdir -p "$STOCK_DIR"
+reapplied=0
+skipped=0
+
+for rel in "${!PATCH_MAP[@]}"; do
+    src="$SRC_DIR/$rel"
+    dst="${PATCH_MAP[$rel]}"
+
+    if [ ! -f "$src" ]; then
+        log "AVISO: fuente ausente, se omite: $rel"
+        continue
+    fi
+
+    # Ya parcheado -> nada que hacer
+    if [ -f "$dst" ] && cmp -s "$src" "$dst"; then
+        skipped=$((skipped + 1))
+        continue
+    fi
+
+    # Validar sintaxis PHP de NUESTRO parche antes de tocar nada
+    if command -v php >/dev/null 2>&1; then
+        if ! php -l "$src" >/dev/null 2>&1; then
+            log "ERROR: nuestro parche $rel no pasa php -l; se omite para no romper el panel."
+            continue
+        fi
+    fi
+
+    # Salvaguarda: preservar el archivo core actual (posible version nueva de
+    # Hestia) antes de sobrescribirlo, para poder revisar que cambio upstream.
+    if [ -f "$dst" ]; then
+        ts=$(date '+%Y%m%d-%H%M%S')
+        safe_name="$(echo "$dst" | sed 's|/|_|g')"
+        cp "$dst" "$STOCK_DIR/${safe_name}.${ts}"
+        log "Guardada copia previa de $dst en post-update-stock/${safe_name}.${ts}"
+    fi
+
+    mkdir -p "$(dirname "$dst")"
+    if cp "$src" "$dst"; then
+        chown "$WEB_USER":"$WEB_USER" "$dst" 2>/dev/null || true
+        chmod 644 "$dst"
+        log "Reaplicado: $rel -> $dst"
+        reapplied=$((reapplied + 1))
+    else
+        log "ERROR: no se pudo copiar $rel -> $dst"
+    fi
+done
+
+# Re-parchear v-list-sys-config para exponer ALT_DASHBOARD (una actualizacion
+# lo revierte a su version de fabrica sin nuestra clave en el whitelist).
+SYS_CONFIG_BIN="/usr/local/hestia/bin/v-list-sys-config"
+if [ -f "$SYS_CONFIG_BIN" ] && ! grep -q '"ALT_DASHBOARD"' "$SYS_CONFIG_BIN"; then
+    ts=$(date '+%Y%m%d-%H%M%S')
+    cp "$SYS_CONFIG_BIN" "$STOCK_DIR/v-list-sys-config.${ts}"
+    sed -i 's/\(\s*\)"ANTISPAM_SYSTEM": /\1"ALT_DASHBOARD": "'"'"'$ALT_DASHBOARD'"'"'",\n\1"ANTISPAM_SYSTEM": /' "$SYS_CONFIG_BIN"
+    if bash -n "$SYS_CONFIG_BIN" 2>/dev/null && grep -q '"ALT_DASHBOARD"' "$SYS_CONFIG_BIN"; then
+        log "Re-parcheado v-list-sys-config para exponer ALT_DASHBOARD"
+        reapplied=$((reapplied + 1))
+    else
+        log "AVISO: fallo al re-parchear v-list-sys-config; restaurando original"
+        cp "$STOCK_DIR/v-list-sys-config.${ts}" "$SYS_CONFIG_BIN"
+    fi
+fi
+
+if [ $reapplied -gt 0 ]; then
+    log "Reaplicacion completada: $reapplied cambio(s), $skipped ya correcto(s)."
+    if [ -n "$(ls -A "$STOCK_DIR" 2>/dev/null)" ]; then
+        log "NOTA: revisa post-update-stock/ por si la actualizacion de Hestia cambio estos archivos y hay que regenerar los parches."
+    fi
+fi
+
+exit 0

@@ -433,6 +433,25 @@ remove_cli_command() {
     fi
 }
 
+# Function to remove update protection (reapply script + APT hook)
+remove_update_protection() {
+    print_status "Removing update protection..."
+
+    if [ -f "$BIN_DIR/hestia-theme-reapply" ]; then
+        rm "$BIN_DIR/hestia-theme-reapply"
+        print_status "Removed reapply script: $BIN_DIR/hestia-theme-reapply"
+    fi
+
+    local hook="/etc/apt/apt.conf.d/99-hestia-theme-reapply"
+    if [ -f "$hook" ]; then
+        rm "$hook"
+        print_status "Removed APT hook: $hook"
+    fi
+
+    # reapply-src y post-update-stock viven bajo $PLUGIN_DIR y se eliminan al
+    # borrar el plugin; no hace falta tocarlos aqui.
+}
+
 # Function to remove logrotate configuration
 remove_logrotate() {
     print_status "Removing log rotation configuration..."
@@ -534,6 +553,7 @@ force_uninstall() {
     remove_sudo_permissions
     remove_theme_log
     remove_cli_command
+    remove_update_protection
     remove_logrotate
 
     # Try to restore original theme if possible
@@ -573,6 +593,7 @@ main() {
     remove_sudo_permissions
     remove_theme_log
     remove_cli_command
+    remove_update_protection
     remove_logrotate
     remove_plugin_directory
     cleanup_remaining_files
