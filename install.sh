@@ -340,6 +340,24 @@ install_theme_css_files() {
                     print_warning "Failed to copy CSS file: $filename"
                 fi
             done < <(find "$css_dir" -maxdepth 1 -type f -name "*.css")
+
+            # Deploy self-hosted fonts (soberania: sin llamadas a Google Fonts).
+            # Los CSS aterrizan planos en css/themes/custom/, y referencian las
+            # fuentes con @import url(fonts/fonts.css) -> css/themes/custom/fonts/.
+            # El bucle de .css de arriba usa -maxdepth 1, asi que no copia esta
+            # subcarpeta; hay que desplegarla explicitamente.
+            if [ -d "$css_dir/fonts" ]; then
+                fonts_target="$HESTIA_WEB_DIR/css/themes/custom/fonts"
+                mkdir -p "$fonts_target"
+                if cp -r "$css_dir/fonts/." "$fonts_target/"; then
+                    chown -R hestiaweb:hestiaweb "$fonts_target"
+                    find "$fonts_target" -type d -exec chmod 755 {} \;
+                    find "$fonts_target" -type f -exec chmod 644 {} \;
+                    print_status "Installed self-hosted fonts for theme: $theme_name"
+                else
+                    print_warning "Failed to deploy fonts for theme: $theme_name"
+                fi
+            fi
         fi
     done
     

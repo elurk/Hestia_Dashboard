@@ -223,8 +223,16 @@ remove_custom_css_themes() {
     CUSTOM_THEMES_DIR="$HESTIA_WEB_DIR/css/themes/custom"
     if [ -d "$CUSTOM_THEMES_DIR" ]; then
         local removed_count=0
-        
-        # Remove all *_color.css files (theme CSS files installed by new system)
+
+        # Self-hosted fonts deployed alongside the CSS (soberania). Remove the
+        # whole fonts/ subdir first, otherwise the "empty dir" check below never
+        # fires and the directory lingers.
+        if [ -d "$CUSTOM_THEMES_DIR/fonts" ]; then
+            rm -rf "$CUSTOM_THEMES_DIR/fonts"
+            print_status "Removed self-hosted fonts directory"
+        fi
+
+        # Legacy: older versions installed theme CSS as *_color.css
         for css_file in "$CUSTOM_THEMES_DIR"/*_color.css; do
             if [ -f "$css_file" ]; then
                 rm "$css_file"
@@ -232,15 +240,31 @@ remove_custom_css_themes() {
                 removed_count=$((removed_count + 1))
             fi
         done
-        
+
+        # Current installs copy each theme CSS verbatim (e.g. maxtheme-dark-blue.css),
+        # NOT *_color.css - so the legacy glob above misses them all. Derive the
+        # exact filenames from the installed theme sources in $THEME_DIR (still
+        # present at this point; remove_themes_directory runs after this) and
+        # remove only those, so we never touch CSS that isn't ours.
+        if [ -d "$THEME_DIR" ]; then
+            while read -r src_css; do
+                target="$CUSTOM_THEMES_DIR/$(basename "$src_css")"
+                if [ -f "$target" ]; then
+                    rm "$target"
+                    print_status "Removed theme CSS: $(basename "$target")"
+                    removed_count=$((removed_count + 1))
+                fi
+            done < <(find "$THEME_DIR" -type f -name "*.css" -path "*/css/*")
+        fi
+
         if [ $removed_count -eq 0 ]; then
             print_status "No custom CSS theme files found to remove"
         else
             print_status "Removed $removed_count custom CSS theme files"
         fi
-        
+
         # Remove custom themes directory if empty
-        if [ -z "$(ls -A $CUSTOM_THEMES_DIR 2>/dev/null)" ]; then
+        if [ -z "$(ls -A "$CUSTOM_THEMES_DIR" 2>/dev/null)" ]; then
             rmdir "$CUSTOM_THEMES_DIR"
             print_status "Empty custom themes directory removed"
         fi
