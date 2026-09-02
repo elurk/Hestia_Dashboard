@@ -1,8 +1,18 @@
 # Roadmap — Dashboard Manager (fork Elurk)
 
-Objetivo: panel HestiaCP con la comodidad de Plesk/cPanel, 100% FOSS y soberano.
-Que un usuario que viene de Plesk o cPanel se sienta en casa, sin items fantasma
-ni clon legal — arquitectura y vocabulario familiares sobre funciones reales de Hestia.
+Objetivo: panel HestiaCP limpio, moderno y soberano, diferenciado por FUNCIÓN.
+
+## DECISIÓN 2026-08-29 (tras probar en el lab)
+
+El Dashboard Manager solo reestiliza la portada; las páginas interiores siguen
+siendo Hestia (y el tema hasta las rompe un poco). Parecerse a Plesk de verdad
+(vista por dominio con pestañas + reestilizar cada página) es Nivel 3: cientos de
+horas + mantenimiento perpetuo. **Descartado el clon de Plesk.**
+
+Dirección elegida: **tema cohesivo + valor**. Reestilizar las páginas interiores
+con CSS para un aspecto limpio, moderno y con marca Elurk (cohesivo, no Plesk
+idéntico), y diferenciarse por lo que Plesk NO da: pestañas de valor (Seguridad,
+WordPress, Logs, Seguimiento de correo). Diferenciar por función, no por chrome.
 
 ---
 
