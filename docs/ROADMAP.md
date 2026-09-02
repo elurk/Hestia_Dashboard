@@ -31,6 +31,24 @@ verificar `v-add-firewall-rule` (blacklist).
 
 ---
 
+## >>> PRIORIDAD Nº1 (decisión del usuario): VISTA POR DOMINIO <<<
+
+Lo que MÁS le molesta de Hestia y más quiere de Plesk. Hestia es centrado en el
+SERVICIO (vas a Correo → ves todos los dominios mezclados); Plesk es centrado en
+el DOMINIO (eliges un dominio → sus pestañas Web/DNS/Correo/BBDD). Esto es lo que
+de verdad hace que Plesk "se sienta" mejor.
+
+- [ ] **Página "vista de dominio"**: eliges un dominio y arriba pestañas
+      Web · DNS · Correo · BBDD · WordPress que cargan datos de ESE dominio.
+      Lee v-list-web-domain, v-list-dns-records, v-list-mail-accounts... filtrado.
+      Mismo patrón wrapper+pestaña ya probado, a mayor escala.
+- WRINKLE: Hestia no asocia BBDD a dominios (van por usuario) → mapear por usuario
+  del dominio o por convención de nombres.
+- Es la razón estratégica para quedarse en Hestia: ningún panel FOSS da vista por
+  dominio + correo + DNS (CloudPanel no tiene correo/DNS). Solo se logra aquí.
+
+---
+
 ## Fase 2 — Tras el lab (victorias rápidas, mismo patrón wrapper+pestaña)
 
 Primero rematar Fase 1 en el lab (CSS, lint PHP), luego estas, que son las
