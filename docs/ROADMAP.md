@@ -39,9 +39,14 @@ el DOMINIO (eliges un dominio → sus pestañas Web/DNS/Correo/BBDD). Esto es lo
 de verdad hace que Plesk "se sienta" mejor.
 
 - [ ] **Página "vista de dominio"**: eliges un dominio y arriba pestañas
-      Web · DNS · Correo · BBDD · WordPress que cargan datos de ESE dominio.
-      Lee v-list-web-domain, v-list-dns-records, v-list-mail-accounts... filtrado.
-      Mismo patrón wrapper+pestaña ya probado, a mayor escala.
+      Web · DNS · Correo · BBDD · **Archivos** · WordPress que cargan datos de ESE
+      dominio. Lee v-list-web-domain, v-list-dns-records, v-list-mail-accounts...
+      filtrado. Mismo patrón wrapper+pestaña ya probado, a mayor escala.
+- [ ] Pestaña **Archivos**: deep-link al File Manager de Hestia (/fm/) POSICIONADO
+      en el public_html del dominio (el FM acepta ruta de inicio). Reutiliza el FM
+      de Hestia, scoped al dominio (modelo Plesk). El usuario cliente solo ve su árbol.
+      VERIFICAR EN LAB: ¿el FM de Hestia soporta drag-and-drop para subir? (zip/comprimir
+      y extraer SÍ los trae). Si no hay drag-drop, sustituir el FM sería proyecto aparte.
 - WRINKLE: Hestia no asocia BBDD a dominios (van por usuario) → mapear por usuario
   del dominio o por convención de nombres.
 - Es la razón estratégica para quedarse en Hestia: ningún panel FOSS da vista por
