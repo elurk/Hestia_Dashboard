@@ -15,13 +15,14 @@
 #
 #   --dry-run   Muestra lo que haria SIN cambiar nada. Empieza siempre por aqui.
 #   --scan      Ademas, lanza wordfence CLI si esta disponible.
+#   --scan-only Solo escanea (no toca permisos ni wp-config); implica --scan.
 #
 # SEGURIDAD: solo actua si detecta un WordPress real (wp-config.php + wp-includes)
 # y si la ruta esta bajo /home/*/web/*/public_html, para no tocar nada fuera.
 
 set -u
 
-USER_ARG=""; DOMAIN_ARG=""; PATH_ARG=""; DRY=0; SCAN=0
+USER_ARG=""; DOMAIN_ARG=""; PATH_ARG=""; DRY=0; SCAN=0; SCAN_ONLY=0
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -30,6 +31,7 @@ while [ $# -gt 0 ]; do
         --path)   PATH_ARG="$2"; shift 2 ;;
         --dry-run) DRY=1; shift ;;
         --scan)   SCAN=1; shift ;;
+        --scan-only) SCAN=1; SCAN_ONLY=1; shift ;;
         *) echo "Argumento desconocido: $1"; exit 1 ;;
     esac
 done
@@ -67,7 +69,12 @@ echo "Usuario del sitio: $SITE_USER"
 [ "$DRY" -eq 1 ] && echo "MODO DRY-RUN: no se cambiara nada." || echo "MODO REAL: se aplicaran cambios."
 echo
 
+if [ "$SCAN_ONLY" -eq 1 ]; then
+    echo "Modo solo escaneo: no se modifican permisos ni configuracion."
+fi
+
 # --- 1. Propietario correcto ---
+[ "$SCAN_ONLY" -eq 0 ] && {
 echo "[1/5] Propietario -> $SITE_USER:$SITE_USER"
 run "chown -R '$SITE_USER':'$SITE_USER' '$DOCROOT'"
 
@@ -124,6 +131,8 @@ HTEOF
 else
     info "No hay carpeta uploads todavia; se omite"
 fi
+
+}  # fin pasos 1-4 (omitidos en --scan-only)
 
 # --- 5. Escaneo opcional de vulnerabilidades ---
 echo "[5/5] Escaneo de vulnerabilidades"

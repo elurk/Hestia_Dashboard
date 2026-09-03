@@ -45,18 +45,27 @@ case "$cmd" in
         valid_name "$u" || json_err "usuario invalido"
         valid_name "$d" || json_err "dominio invalido"
         [ -x "$HARDEN_BIN" ] || json_err "falta hestia-wp-harden"
-        extra=""
-        [ "$cmd" = "scan" ] && extra="--scan"
-        if "$HARDEN_BIN" --user "$u" --domain "$d" $extra >/tmp/wpharden.$$ 2>&1; then
-            # Devolver ok + ultimas lineas del log como resumen
-            summary=$(tail -c 500 /tmp/wpharden.$$ | tr '\n' ' ' | sed 's/"/\\"/g')
-            rm -f /tmp/wpharden.$$
-            echo "{\"ok\":true,\"summary\":\"$summary\"}"
+        # 'scan' solo escanea (--scan-only); 'harden' aplica el endurecimiento.
+        extra="--scan-only"
+        [ "$cmd" = "harden" ] && extra=""
+        out_file=$(mktemp)
+        if "$HARDEN_BIN" --user "$u" --domain "$d" $extra >"$out_file" 2>&1; then ok=true; else ok=false; fi
+        # JSON ROBUSTO: la salida puede llevar barras invertidas, comillas y
+        # saltos de linea (p.ej. la nota de nginx '\.php\$'); escaparla a mano
+        # rompia el JSON y el navegador daba 'error'. Se usa python3 (presente en
+        # Ubuntu/Debian) y, si faltara, un saneado conservador.
+        if command -v python3 >/dev/null 2>&1; then
+            python3 - "$ok" "$out_file" << 'PYEOF'
+import json, sys
+ok = sys.argv[1] == "true"
+txt = open(sys.argv[2], encoding="utf-8", errors="replace").read()[-1200:]
+print(json.dumps({"ok": ok, ("summary" if ok else "error"): txt}, ensure_ascii=False))
+PYEOF
         else
-            summary=$(tail -c 500 /tmp/wpharden.$$ | tr '\n' ' ' | sed 's/"/\\"/g')
-            rm -f /tmp/wpharden.$$
-            echo "{\"ok\":false,\"error\":\"$summary\"}"
+            summary=$(tail -c 800 "$out_file" | tr -d '\\' | tr '\n\r\t' '   ' | sed 's/"/\\"/g')
+            [ "$ok" = true ] && echo "{\"ok\":true,\"summary\":\"$summary\"}" || echo "{\"ok\":false,\"error\":\"$summary\"}"
         fi
+        rm -f "$out_file"
         ;;
     *)
         json_err "subcomando desconocido"
