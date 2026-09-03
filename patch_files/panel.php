@@ -1,4 +1,17 @@
 <div id="token" token="<?= $_SESSION["token"] ?>"></div>
+<script>
+// Anti-anidamiento (Dashboard Manager): la vista de dominio embebe SOLO el gestor
+// de archivos (/fm/). Si cualquier otra pagina del panel acaba dentro de un iframe
+// (p.ej. al salir del gestor embebido), se saca al nivel superior para evitar
+// panel-dentro-de-panel en bucle.
+(function () {
+	try {
+		if (window.self !== window.top && !/^\/fm(\/|$)/.test(window.location.pathname)) {
+			window.top.location.href = window.location.href;
+		}
+	} catch (e) {}
+})();
+</script>
 
 <header class="app-header">
 

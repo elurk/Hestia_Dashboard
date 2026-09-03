@@ -335,13 +335,26 @@
                         d.head.appendChild(st);
                     } catch (e) {}
                 }
-                fm.addEventListener("load", function onload() {
-                    fm.removeEventListener("load", onload);
+                var firstLoad = true;
+                // Listener PERSISTENTE: en cada carga del iframe comprobamos que sigue
+                // siendo el gestor (/fm/). Si navega a otra pagina del panel (salir,
+                // sesion caducada -> login...), la abrimos en la ventana principal en
+                // vez de dejar el panel anidado dentro del iframe.
+                fm.addEventListener("load", function () {
+                    var p = "";
+                    try { p = fm.contentWindow.location.pathname || ""; } catch (e) { return; }
+                    if (!/^\/fm(\/|$)/.test(p)) {
+                        try { window.location.href = fm.contentWindow.location.href; } catch (e) { window.location.href = "/"; }
+                        return;
+                    }
                     injectFmStyle();
-                    setTimeout(function () {
-                        try { fm.contentWindow.location.hash = fm.dataset.hash; } catch (e) {}
-                        injectFmStyle(); // por si la SPA re-renderizo el head
-                    }, 400);
+                    if (firstLoad) {
+                        firstLoad = false;
+                        setTimeout(function () {
+                            try { fm.contentWindow.location.hash = fm.dataset.hash; } catch (e) {}
+                            injectFmStyle(); // por si la SPA re-renderizo el head
+                        }, 400);
+                    }
                 });
                 fm.setAttribute("src", fm.dataset.base);
             }
