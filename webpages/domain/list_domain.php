@@ -344,7 +344,18 @@
                     /* Botones del gestor: claros con texto oscuro; solo el primario azul+blanco */
                     ".button:not(.is-primary),.button:not(.is-primary) *,.dropdown-trigger .button,.dropdown-trigger .button *{background:#FFFFFF!important;color:#212529!important;border-color:#CFD8E0!important}",
                     ".button:not(.is-primary):hover{background:#E8F1F9!important;color:#1A73B8!important}",
-                    ".button.is-primary,.button.is-primary *,.tag.is-primary,.tag.is-primary *,.is-selected .tag{background:#1A73B8!important;border-color:#1A73B8!important;color:#fff!important}"
+                    ".button.is-primary,.button.is-primary *,.tag.is-primary,.tag.is-primary *,.is-selected .tag{background:#1A73B8!important;border-color:#1A73B8!important;color:#fff!important}",
+                    /* Botones de accion (Anadir ficheros, Nuevo...) AZULES con texto blanco.
+                       Hestia usa `#multi-actions a:not([data-v])` (un id) y ganaba a `.button`. */
+                    "#multi-actions a:not([data-v]),#multi-actions .upload a:not([data-v]),#multi-actions a:not([data-v]) *,#multi-actions .upload a:not([data-v]) *{background:#1A73B8!important;border-color:#1A73B8!important;color:#FFFFFF!important}",
+                    "#multi-actions a:not([data-v]):hover,#multi-actions .upload a:not([data-v]):hover,#multi-actions a:not([data-v]):hover *{background:#145C94!important;color:#FFFFFF!important}",
+                    /* ...y sus opciones desplegadas, blancas con texto oscuro */
+                    "#multi-actions a.dropdown-item:not([data-v]),#multi-actions a.dropdown-item:not([data-v]) *,#multi-actions .dropdown-menu a:not([data-v]),#multi-actions .dropdown-menu a:not([data-v]) *,#multi-actions a:not([data-v]) .dropdown-item,#multi-actions .dropdown-content{background:#FFFFFF!important;color:#212529!important;border-color:transparent!important}",
+                    "#multi-actions a.dropdown-item:not([data-v]):hover,#multi-actions a.dropdown-item:not([data-v]):hover *,#multi-actions .dropdown-menu a:not([data-v]):hover,#multi-actions .dropdown-menu a:not([data-v]):hover *,#multi-actions a:not([data-v]) .dropdown-item:hover{background:#E8F1F9!important;color:#1A73B8!important}",
+                    /* Cabecera de la tabla AZUL con texto blanco (salia negra con texto negro) */
+                    ".table thead,.table thead tr,.table thead th,.b-table .table thead th,.table thead th *,.table thead .th-wrap,.table thead .th-wrap *,.table thead .icon,.table thead svg{background:#1A73B8!important;color:#FFFFFF!important;border-color:#1A73B8!important;fill:#FFFFFF!important}",
+                    ".table thead th{padding:6px 4px!important}",
+                    ".table thead .checkbox .check,.table thead .b-checkbox .check{border-color:#FFFFFF!important}"
                 ].join("");
                 function injectFmStyle() {
                     try {
