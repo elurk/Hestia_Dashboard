@@ -1,0 +1,23 @@
+
+/* ELURK-FM-LIGHT (Dashboard Manager, fork Elurk)
+   Tema CLARO forzado para el gestor de archivos (FileGator) con la paleta del
+   panel. Hestia pone el FM oscuro via @media (prefers-color-scheme: dark) segun
+   el modo oscuro del sistema; estas reglas van DESPUES con los mismos selectores
+   y !important, asi que ganan la cascada con cualquier preferencia del sistema. */
+html, body, .navbar { background-color: #F4F6F8 !important; color: #212529 !important; }
+.table.is-hoverable tbody tr:nth-child(odd) { background-color: #FFFFFF !important; }
+.table.is-hoverable tbody tr:nth-child(even) { background-color: #FAFBFC !important; }
+.table.is-hoverable tbody tr:not(.is-selected):hover { background-color: #E8F1F9 !important; }
+.table td, .table th { color: #212529 !important; border-color: #EEF1F4 !important; }
+.file-row.type-file a.name:not([data-v])::before { color: #6B7A88 !important; }
+.breadcrumb a:not([data-v]) { background: #FFFFFF !important; color: #1A73B8 !important; border: 1px solid #E1E6EA !important; }
+.breadcrumb a:not([data-v]):hover { background: #E8F1F9 !important; color: #145C94 !important; }
+.breadcrumb li + li::before { color: #B0BAC4 !important; }
+.dropdown-trigger .button { color: #212529 !important; }
+.dropdown-trigger .button:hover { color: #1A73B8 !important; background: #E8F1F9 !important; border-radius: 6px !important; }
+.tree-list .button.is-primary, .button.is-primary { background-color: #1A73B8 !important; border-color: #1A73B8 !important; color: #fff !important; }
+.tree-list .button.is-primary:hover, .button.is-primary:hover { background-color: #145C94 !important; }
+.tree-list a:not([data-v]):hover { background: #E8F1F9 !important; }
+.progress-box .box, .box, .modal-card, .modal-card-body, .modal-card-head, .modal-card-foot { background: #FFFFFF !important; color: #212529 !important; }
+a, .has-text-primary { color: #1A73B8 !important; }
+.is-selected, .table tr.is-selected { background-color: #D6E7F5 !important; color: #212529 !important; }

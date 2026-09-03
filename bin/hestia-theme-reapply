@@ -103,6 +103,16 @@ for rel in "${!PATCH_MAP[@]}"; do
     fi
 done
 
+# Gestor de archivos en tema claro: una actualizacion de Hestia repone su
+# hst-custom.css (oscuro segun el sistema). Si falta nuestro marcador, se
+# vuelve a anadir el bloque claro al final.
+FM_CSS="/usr/local/hestia/web/fm/css/hst-custom.css"
+if [ -f "$FM_CSS" ] && [ -f "$SRC_DIR/fm-light.css" ] && ! grep -q "ELURK-FM-LIGHT" "$FM_CSS"; then
+    cat "$SRC_DIR/fm-light.css" >> "$FM_CSS"
+    log "Reaplicado tema claro del gestor de archivos en $FM_CSS"
+    reapplied=$((reapplied + 1))
+fi
+
 # Re-parchear v-list-sys-config para exponer ALT_DASHBOARD (una actualizacion
 # lo revierte a su version de fabrica sin nuestra clave en el whitelist).
 SYS_CONFIG_BIN="/usr/local/hestia/bin/v-list-sys-config"

@@ -457,6 +457,18 @@ remove_admin_tabs() {
         fi
     done
 
+    # Gestor de archivos: quitar nuestro bloque de tema claro de hst-custom.css
+    # (restaurar el backup del original si existe; si no, cortar desde el marcador).
+    local fm_css="/usr/local/hestia/web/fm/css/hst-custom.css"
+    if [ -f "$fm_css" ] && grep -q "ELURK-FM-LIGHT" "$fm_css"; then
+        if [ -f "$BACKUP_DIR/original-files/hst-custom.css" ]; then
+            cp "$BACKUP_DIR/original-files/hst-custom.css" "$fm_css"
+        else
+            sed -i '/ELURK-FM-LIGHT/,$d' "$fm_css"
+        fi
+        print_status "File manager: tema claro retirado de hst-custom.css"
+    fi
+
     # NO se tocan las reglas de firewall (lista negra) ni el ignoreip (lista
     # blanca) que hayas creado: son configuracion de seguridad tuya, no del
     # plugin. Se gestionan en Server -> Firewall y en jail.d/.

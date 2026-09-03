@@ -314,6 +314,21 @@ install_update_protection() {
     if [ -d "$SCRIPT_DIR/webpages" ]; then
         cp -r "$SCRIPT_DIR/webpages" "$src_dir/"
     fi
+
+    # Gestor de archivos (FileGator) en tema CLARO con la paleta del panel.
+    # Hestia lo pone oscuro segun prefers-color-scheme del sistema en
+    # web/fm/css/hst-custom.css; anadimos nuestro bloque al FINAL (gana la
+    # cascada). Idempotente por marcador; backup del original; reapply lo repone.
+    local fm_css="/usr/local/hestia/web/fm/css/hst-custom.css"
+    if [ -f "$SCRIPT_DIR/themes-elurk/fm-light.css" ]; then
+        cp "$SCRIPT_DIR/themes-elurk/fm-light.css" "$src_dir/fm-light.css"
+        if [ -f "$fm_css" ] && ! grep -q "ELURK-FM-LIGHT" "$fm_css"; then
+            mkdir -p "$BACKUP_DIR/original-files"
+            [ -f "$BACKUP_DIR/original-files/hst-custom.css" ] || cp "$fm_css" "$BACKUP_DIR/original-files/hst-custom.css"
+            cat "$SCRIPT_DIR/themes-elurk/fm-light.css" >> "$fm_css"
+            print_status "File manager: tema claro anadido a hst-custom.css"
+        fi
+    fi
     chown -R hestiaweb:hestiaweb "$src_dir" 2>/dev/null || true
     find "$src_dir" -type d -exec chmod 755 {} \;
     find "$src_dir" -type f -exec chmod 644 {} \;
