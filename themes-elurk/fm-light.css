@@ -27,3 +27,10 @@ body, p, span, li, td, th, label, .label, .title, .subtitle, .help, .table, .fil
 .input::placeholder, .textarea::placeholder { color: #8A96A3 !important; }
 /* ...salvo dentro de botones/etiquetas primarios, que van en blanco */
 .button.is-primary, .button.is-primary *, .tag.is-primary, .tag.is-primary *, .is-selected .tag { color: #fff !important; }
+/* Barra superior y BOTONES del gestor: claros con texto oscuro (el css oscuro de
+   Hestia los dejaba negros con texto negro). Solo el primario va azul+blanco. */
+.navbar, .navbar-menu, .navbar-dropdown, .navbar-item, .navbar-link, .navbar-brand { background: #FFFFFF !important; color: #212529 !important; }
+.navbar-item:hover, .navbar-link:hover { background: #E8F1F9 !important; color: #1A73B8 !important; }
+.button:not(.is-primary), .button:not(.is-primary) *, .dropdown-trigger .button, .dropdown-trigger .button * { background: #FFFFFF !important; color: #212529 !important; border-color: #CFD8E0 !important; }
+.button:not(.is-primary):hover { background: #E8F1F9 !important; color: #1A73B8 !important; }
+.button.is-primary, .button.is-primary * { background: #1A73B8 !important; border-color: #1A73B8 !important; color: #FFFFFF !important; }

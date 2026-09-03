@@ -341,8 +341,10 @@
                     "body,p,span,li,td,th,label,.label,.title,.subtitle,.help,.table,.file-row a,.file-row a.name,.breadcrumb li,.dropdown-item,.dropdown-content,.tree-list,.tree-list a,.pagination-link,.modal-card,.box,.card,.card-content,.navbar-item,.level-item,.column,.input,.textarea,.select select{color:#212529!important}",
                     ".input,.textarea,.select select{background:#FFFFFF!important;border-color:#CFD8E0!important}",
                     ".input::placeholder,.textarea::placeholder{color:#8A96A3!important}",
-                    /* ...salvo dentro de los botones/etiquetas primarios, que van en blanco */
-                    ".button.is-primary,.button.is-primary *,.tag.is-primary,.tag.is-primary *,.is-selected .tag{color:#fff!important}"
+                    /* Botones del gestor: claros con texto oscuro; solo el primario azul+blanco */
+                    ".button:not(.is-primary),.button:not(.is-primary) *,.dropdown-trigger .button,.dropdown-trigger .button *{background:#FFFFFF!important;color:#212529!important;border-color:#CFD8E0!important}",
+                    ".button:not(.is-primary):hover{background:#E8F1F9!important;color:#1A73B8!important}",
+                    ".button.is-primary,.button.is-primary *,.tag.is-primary,.tag.is-primary *,.is-selected .tag{background:#1A73B8!important;border-color:#1A73B8!important;color:#fff!important}"
                 ].join("");
                 function injectFmStyle() {
                     try {

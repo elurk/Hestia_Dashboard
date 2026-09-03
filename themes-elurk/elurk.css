@@ -1443,25 +1443,17 @@ button[x-on\:click*="showAdvanced"], button[\@click*="showAdvanced"] { display: 
 .top-bar, .top-bar *, .top-bar-usage, .top-bar-usage-item, .top-bar-usage-item * , .top-bar-menu-link { color: var(--elurk-carbon) !important; }
 
 /* ==========================================================================
-   CABECERA AZUL con texto/iconos BLANCOS (corrige negro-sobre-negro) y botones
-   legibles: primarios azul+blanco, secundarios/atras gris claro+oscuro, peligro rojo.
+   Cabecera de Hestia en BLANCO con texto oscuro (como estaba). Botones legibles:
+   primarios azul+blanco, secundarios/atras gris claro+oscuro, peligro rojo+blanco.
    ========================================================================== */
 header.app-header, .top-bar, .top-bar-inner, .container.top-bar-inner {
-  background: #1A73B8 !important;
-  box-shadow: 0 1px 0 rgba(0,0,0,.08) !important;
+  background: #FFFFFF !important;
+  box-shadow: 0 1px 0 #E1E6EA !important;
 }
-.top-bar, .top-bar *, .top-bar-usage, .top-bar-usage-item, .top-bar-usage-item *, .top-bar-menu-link, .top-bar-menu-link i {
-  color: #FFFFFF !important;
-}
-.top-bar-menu-link:hover, .top-bar-menu-link.active { background: rgba(255,255,255,.16) !important; border-radius: 6px !important; }
-/* El panel de notificaciones y el menu desplegable de la cabecera van en blanco con texto oscuro */
-.top-bar-notifications-panel, .top-bar-notifications-panel *, .top-bar-menu-panel, .top-bar-menu-panel * {
-  color: #212529 !important;
-}
+.top-bar, .top-bar *, .top-bar-usage-item, .top-bar-usage-item *, .top-bar-menu-link, .top-bar-menu-link i { color: var(--elurk-carbon) !important; }
+.top-bar-menu-link:hover, .top-bar-menu-link.active { background: #E8F1F9 !important; color: var(--elurk-petrol) !important; border-radius: 6px !important; }
 .top-bar-notifications-panel, .top-bar-menu-panel { background: #FFFFFF !important; border: 1px solid #E1E6EA !important; }
-.top-bar-menu-panel .top-bar-menu-link:hover { background: #E8F1F9 !important; color: #1A73B8 !important; }
 
-/* Botones: nunca negro-sobre-negro */
 .button, .button i, .button span { color: #FFFFFF !important; }
 .button { background: #1A73B8 !important; border-color: #1A73B8 !important; }
 .button:hover { background: #145C94 !important; border-color: #145C94 !important; }
