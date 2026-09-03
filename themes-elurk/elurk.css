@@ -1493,3 +1493,14 @@ header.app-header, .top-bar, .top-bar-inner, .container.top-bar-inner {
 }
 .main-menu ul, .main-menu li { list-style: none !important; margin: 0 !important; }
 .main-menu button.u-hide-tablet, .main-menu .main-menu-toggle { display: none !important; }
+
+/* Lineas del sidebar: el enlace ocupa TODA la columna (bloque, no boton dentro de
+   la linea) y con menos altura. Sin padding/margen en li ni en el label. */
+.main-menu-item { display: block !important; width: 100% !important; padding: 0 !important; margin: 0 !important; }
+.main-menu-item-link {
+  display: flex !important; width: 100% !important; box-sizing: border-box !important;
+  padding: .45rem 1rem !important; margin: 0 !important; min-height: 0 !important; height: auto !important;
+  line-height: 1.25 !important; align-items: center !important; justify-content: flex-start !important;
+}
+.main-menu-item-label { padding: 0 !important; margin: 0 !important; font-size: .88rem !important; line-height: 1.25 !important; width: 100% !important; }
+.main-menu-item-label i, .main-menu-item-label .fas, .main-menu-item-label .fab { font-size: .95rem !important; width: 1.15rem !important; }
