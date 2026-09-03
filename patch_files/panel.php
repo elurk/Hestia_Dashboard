@@ -294,6 +294,13 @@
 			</button>
 			<ul x-cloak x-show="open" class="main-menu-list">
 
+				<!-- Tablero (dashboard) - Dashboard Manager -->
+				<li class="main-menu-item">
+					<a class="main-menu-item-link <?php if ($TAB == "DASHBOARD") { echo "active"; } ?>" href="/list/dashboard/" title="Tablero">
+						<p class="main-menu-item-label">Tablero<i class="fas fa-gauge"></i></p>
+					</a>
+				</li>
+
 				<!-- Users tab -->
 				<?php if ($_SESSION["userContext"] == "admin" && $_SESSION["look"] === "") { ?>
 					<?php if ($_SESSION["user"] !== "admin" && $_SESSION["POLICY_SYSTEM_HIDE_ADMIN"] === "yes") {
@@ -493,3 +500,43 @@
 </header>
 
 <main class="app-content">
+<?php
+// ---- Breadcrumb global (Dashboard Manager) ----
+// Casa -> listado de dominios. Si venimos de un dominio (from= o domain=), enlaza
+// al panel de ese dominio y, si se indica tab=, a su pestana. Se oculta en el tablero.
+$__path = strtok($_SERVER["REQUEST_URI"] ?? "/", "?");
+$__dom = "";
+foreach (["from", "domain"] as $__k) {
+	if (!empty($_GET[$__k]) && preg_match('/^[a-z0-9.-]{1,253}$/i', $_GET[$__k])) { $__dom = $_GET[$__k]; break; }
+}
+$__tabs = ["info" => "Panel de información", "hosting" => "Hosting y DNS", "mail" => "Correo", "files" => "Archivos", "db" => "Bases de datos", "wp" => "WordPress"];
+$__tab = (!empty($_GET["tab"]) && isset($__tabs[$_GET["tab"]])) ? $_GET["tab"] : "";
+$__pages = ["/edit/mail/" => "Editar correo", "/add/mail/" => "Nueva cuenta de correo", "/edit/db/" => "Editar base de datos", "/add/db/" => "Nueva base de datos", "/edit/web/" => "Editar dominio web", "/add/web/" => "Nuevo dominio", "/list/dns/" => "Zona DNS", "/edit/dns/" => "Editar DNS", "/add/dns/" => "Nuevo registro DNS", "/list/backup/" => "Copias de seguridad", "/list/cron/" => "Tareas programadas", "/list/stats/" => "Estadísticas", "/list/log/" => "Registros", "/list/security/" => "Seguridad", "/list/wp/" => "WordPress", "/list/user/" => "Usuarios", "/edit/user/" => "Editar usuario", "/add/user/" => "Nuevo usuario", "/list/web/" => "Dominios web", "/list/mail/" => "Correo", "/list/db/" => "Bases de datos"];
+$__isDomainView = (strpos($__path, "/list/domain/") === 0);
+$__isDashboard = (strpos($__path, "/list/dashboard/") === 0 || $__path === "/" || $__path === "");
+$__a = 'style="color:#1A73B8;text-decoration:none"'; $__sep = '<span style="color:#B0BAC4">›</span>'; $__cur = 'style="color:#212529;font-weight:500"';
+if (!$__isDashboard) {
+	echo '<nav class="dv-crumbs global" style="display:flex;align-items:center;gap:.45rem;font-size:.85rem;color:#6B7A88;padding:.65rem 1.5rem 0;flex-wrap:wrap">';
+	echo '<a href="/list/domain/" title="Dominios" ' . $__a . '><i class="fas fa-house"></i></a>';
+	if ($__isDomainView) {
+		if ($__dom === "") {
+			echo $__sep . '<span ' . $__cur . '>Dominios</span>';
+		} else {
+			echo $__sep . '<a href="/list/domain/" ' . $__a . '>Dominios</a>' . $__sep . '<a href="/list/domain/?domain=' . urlencode($__dom) . '" ' . $__a . '>' . htmlspecialchars($__dom) . '</a>' . $__sep . '<span id="dv-crumb-tab" ' . $__cur . '>Panel de información</span>';
+		}
+	} else {
+		echo $__sep . '<a href="/list/domain/" ' . $__a . '>Dominios</a>';
+		if ($__dom !== "") {
+			echo $__sep . '<a href="/list/domain/?domain=' . urlencode($__dom) . '" ' . $__a . '>' . htmlspecialchars($__dom) . '</a>';
+			if ($__tab !== "") { echo $__sep . '<a href="/list/domain/?domain=' . urlencode($__dom) . '#' . $__tab . '" ' . $__a . '>' . $__tabs[$__tab] . '</a>'; }
+		}
+		$__label = "";
+		foreach ($__pages as $__p => $__l) { if (strpos($__path, $__p) === 0) { $__label = $__l; break; } }
+		if ($__label === "") { $__label = htmlspecialchars((string) ($TAB ?? "")); }
+		if (!empty($_GET["account"]) && $__dom !== "") { $__label .= ": " . htmlspecialchars($_GET["account"] . "@" . $__dom); }
+		elseif (!empty($_GET["database"])) { $__label .= ": " . htmlspecialchars($_GET["database"]); }
+		echo $__sep . '<span ' . $__cur . '>' . $__label . '</span>';
+	}
+	echo '</nav>';
+}
+?>

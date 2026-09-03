@@ -2,11 +2,9 @@
 <?php $tok = $_SESSION["token"]; $h = fn($v) => htmlspecialchars((string) $v); ?>
 
 <style>
-/* Estilos propios de la vista por dominio (autocontenidos, estilo Plesk) */
-.dv-wrap { padding: 1rem 1.5rem 1.5rem; }
-.dv-crumbs { display:flex; align-items:center; gap:.4rem; font-size:.85rem; color:#6B7A88; margin-bottom:.9rem; flex-wrap:wrap; }
-.dv-crumbs a { color:#1A73B8; text-decoration:none; } .dv-crumbs a:hover { text-decoration:underline; }
-.dv-crumbs .sep { color:#B0BAC4; } .dv-crumbs .cur { color:#212529; font-weight:500; }
+/* Estilos propios de la vista por dominio (autocontenidos, estilo Plesk).
+   El breadcrumb es GLOBAL (lo pinta panel.php en todas las paginas). */
+.dv-wrap { padding: .75rem 1.5rem 1.5rem; }
 .dv-head { display:flex; align-items:center; gap:1rem; flex-wrap:wrap; margin-bottom:.75rem; }
 .dv-head h1 { margin:0; font-size:1.6rem; font-weight:600; }
 .dv-head .dv-meta { color:#6B7A88; font-size:.9rem; }
@@ -30,26 +28,10 @@
 .dv-empty { padding:1rem; color:#6B7A88; background:#fff; border:1px solid #E1E6EA; border-radius:8px; }
 .dv-btn { display:inline-block; padding:.45rem .9rem; border-radius:6px; background:#1A73B8; color:#fff !important; text-decoration:none; font-size:.85rem; font-weight:500; }
 .dv-btn.sec { background:#E9EEF2; color:#212529 !important; }
-.dv-fm { width:100%; height:calc(100vh - 260px); min-height:520px; border:1px solid #E1E6EA; border-radius:8px; background:#fff; }
+.dv-fm { width:100%; height:calc(100vh - 280px); min-height:520px; border:1px solid #E1E6EA; border-radius:8px; background:#fff; }
 </style>
 
 <div class="dv-wrap">
-
-<!-- Breadcrumb: siempre visible -->
-<nav class="dv-crumbs">
-    <a href="/"><i class="fas fa-house"></i> Inicio</a>
-    <span class="sep">›</span>
-    <?php if ($mode === "list"): ?>
-        <span class="cur">Dominios</span>
-    <?php else: ?>
-        <a href="/list/domain/">Dominios</a>
-        <span class="sep">›</span>
-        <a href="/list/domain/?domain=<?= urlencode($domain) ?>"><?= $h($domain) ?></a>
-        <span class="sep">›</span>
-        <span class="cur" id="dv-crumb-tab">Panel de información</span>
-    <?php endif; ?>
-</nav>
-
 <?php if ($mode === "list"): ?>
     <!-- ======================= LISTA DE DOMINIOS ======================= -->
     <div class="dv-head">
@@ -82,19 +64,24 @@
 <?php else: ?>
     <!-- ======================= VISTA DE UN DOMINIO ======================= -->
     <?php
-    $u       = urlencode($domain);
+    $u = urlencode($domain);
+    // Contexto de retorno para el breadcrumb global de las paginas nativas de
+    // Hestia: from=<dominio>&tab=<pestana>. Asi "Editar buzon" sabe volver a
+    // dominio.com > Correo.
+    $back = fn(string $tab) => "&from=$u&tab=$tab";
     // Gestor de archivos posicionado en el docroot (deep-link por hash; se
     // ajusta segun el formato de URL real del FM de Hestia).
-    $fmUrl   = "/fm/#" . $docroot;
-    $editWeb = "/edit/web/?domain=$u&token=" . $h($tok);
-    $isSSL   = (($web["SSL"] ?? "no") === "yes");
+    $fmUrl = "/fm/#" . $docroot;
+    $editWebInfo = "/edit/web/?domain=$u" . $back("info") . "&token=" . $h($tok);
+    $editWebHost = "/edit/web/?domain=$u" . $back("hosting") . "&token=" . $h($tok);
+    $isSSL = (($web["SSL"] ?? "no") === "yes");
     // phpMyAdmin SSO (mismo esquema que Hestia en list_db): se firma con el
     // PROPIETARIO de la BD, igual que hace Hestia al impersonar.
     $pmaBase = "https://" . ($_SERVER["HTTP_HOST"] ?? "") . "/" . ($_SESSION["DB_PMA_ALIAS"] ?? "phpmyadmin") . "/";
-    $pmaSso  = isset($_SESSION["PHPMYADMIN_KEY"]) && $_SESSION["PHPMYADMIN_KEY"] !== "" && function_exists("ipUsed") && !ipUsed();
+    $pmaSso = isset($_SESSION["PHPMYADMIN_KEY"]) && $_SESSION["PHPMYADMIN_KEY"] !== "" && function_exists("ipUsed") && !ipUsed();
     $pmaLink = function (string $dbName, array $db) use ($pmaBase, $pmaSso, $owner): string {
         if (!$pmaSso || (($db["TYPE"] ?? "") !== "mysql")) { return $pmaBase; }
-        $time  = time();
+        $time = time();
         $token = password_hash($dbName . $owner . $_SESSION["user_combined_ip"] . $time . $_SESSION["PHPMYADMIN_KEY"], PASSWORD_DEFAULT);
         return $pmaBase . "hestia-sso.php?" . http_build_query([
             "host" => $db["HOST"] ?? "localhost", "database" => $dbName, "user" => $owner, "exp" => $time, "hestia_token" => $token,
@@ -123,27 +110,27 @@
             <div class="dv-tiles">
                 <a class="dv-tile" data-goto="files"><span class="ico" style="background:#2E9BD6"><i class="fas fa-folder-open"></i></span><span><div class="t">Archivos</div><div class="s">Gestor de archivos de este dominio</div></span></a>
                 <a class="dv-tile" data-goto="db"><span class="ico" style="background:#7B4FB3"><i class="fas fa-database"></i></span><span><div class="t">Bases de datos</div><div class="s"><?= count($dbs) ?> base(s) de datos</div></span></a>
-                <a class="dv-tile" href="<?= $editWeb ?>"><span class="ico" style="background:#4C9A2A"><i class="fas fa-right-left"></i></span><span><div class="t">FTP / conexión</div><div class="s">Usuario FTP y ruta</div></span></a>
-                <a class="dv-tile" href="/list/backup/"><span class="ico" style="background:#D9822B"><i class="fas fa-file-zipper"></i></span><span><div class="t">Backup y restauración</div><div class="s">Copias de seguridad</div></span></a>
+                <a class="dv-tile" href="<?= $editWebInfo ?>"><span class="ico" style="background:#4C9A2A"><i class="fas fa-right-left"></i></span><span><div class="t">FTP / conexión</div><div class="s">Usuario FTP y ruta</div></span></a>
+                <a class="dv-tile" href="/list/backup/?<?= ltrim($back("info"), "&") ?>"><span class="ico" style="background:#D9822B"><i class="fas fa-file-zipper"></i></span><span><div class="t">Backup y restauración</div><div class="s">Copias de seguridad</div></span></a>
             </div>
         </div>
         <div class="dv-group">
             <h3>Herramientas de desarrollo</h3>
             <div class="dv-tiles">
-                <a class="dv-tile" href="<?= $editWeb ?>"><span class="ico" style="background:#5B6FBF"><i class="fab fa-php"></i></span><span><div class="t">PHP<?= $phpVersion ? " · versión $phpVersion" : "" ?></div><div class="s">Cambiar versión y ajustes</div></span></a>
-                <a class="dv-tile" href="/list/log/"><span class="ico" style="background:#3C8DAD"><i class="fas fa-file-lines"></i></span><span><div class="t">Registros</div><div class="s">Logs de acceso y errores</div></span></a>
-                <a class="dv-tile" href="/list/cron/"><span class="ico" style="background:#2B8A8A"><i class="fas fa-clock"></i></span><span><div class="t">Tareas programadas</div><div class="s">Cron</div></span></a>
-                <a class="dv-tile" href="/list/stats/"><span class="ico" style="background:#B04A6E"><i class="fas fa-chart-line"></i></span><span><div class="t">Estadísticas</div><div class="s"><?= $h($web["U_DISK"] ?? 0) ?> MB · <?= $h($web["U_BANDWIDTH"] ?? 0) ?> MB/mes</div></span></a>
+                <a class="dv-tile" href="<?= $editWebInfo ?>"><span class="ico" style="background:#5B6FBF"><i class="fab fa-php"></i></span><span><div class="t">PHP<?= $phpVersion ? " · versión $phpVersion" : "" ?></div><div class="s">Cambiar versión y ajustes</div></span></a>
+                <a class="dv-tile" href="/list/log/?<?= ltrim($back("info"), "&") ?>"><span class="ico" style="background:#3C8DAD"><i class="fas fa-file-lines"></i></span><span><div class="t">Registros</div><div class="s">Logs de acceso y errores</div></span></a>
+                <a class="dv-tile" href="/list/cron/?<?= ltrim($back("info"), "&") ?>"><span class="ico" style="background:#2B8A8A"><i class="fas fa-clock"></i></span><span><div class="t">Tareas programadas</div><div class="s">Cron</div></span></a>
+                <a class="dv-tile" href="/list/stats/?<?= ltrim($back("info"), "&") ?>"><span class="ico" style="background:#B04A6E"><i class="fas fa-chart-line"></i></span><span><div class="t">Estadísticas</div><div class="s"><?= $h($web["U_DISK"] ?? 0) ?> MB · <?= $h($web["U_BANDWIDTH"] ?? 0) ?> MB/mes</div></span></a>
                 <a class="dv-tile" data-goto="wp"><span class="ico" style="background:#21759B"><i class="fab fa-wordpress"></i></span><span><div class="t">WordPress</div><div class="s"><?= $isWP ? "Detectado en este dominio" : "No detectado" ?></div></span></a>
             </div>
         </div>
         <div class="dv-group">
             <h3>Seguridad</h3>
             <div class="dv-tiles">
-                <a class="dv-tile" href="<?= $editWeb ?>"><span class="ico" style="background:<?= $isSSL ? '#1E7B45' : '#9A6700' ?>"><i class="fas fa-lock"></i></span><span><div class="t">Certificados SSL/TLS</div><div class="s"><?= $isSSL ? "Activo" . ((($web["LETSENCRYPT"] ?? "no") === "yes") ? " · Let's Encrypt" : "") : "Sin certificado" ?></div></span></a>
+                <a class="dv-tile" href="<?= $editWebInfo ?>"><span class="ico" style="background:<?= $isSSL ? '#1E7B45' : '#9A6700' ?>"><i class="fas fa-lock"></i></span><span><div class="t">Certificados SSL/TLS</div><div class="s"><?= $isSSL ? "Activo" . ((($web["LETSENCRYPT"] ?? "no") === "yes") ? " · Let's Encrypt" : "") : "Sin certificado" ?></div></span></a>
                 <a class="dv-tile" data-goto="hosting"><span class="ico" style="background:#2E9BD6"><i class="fas fa-globe"></i></span><span><div class="t">DNS</div><div class="s"><?= count($dns) ?> registro(s)</div></span></a>
                 <?php if ($isAdmin): ?>
-                <a class="dv-tile" href="/list/security/"><span class="ico" style="background:#C0392B"><i class="fas fa-shield-halved"></i></span><span><div class="t">Fail2ban / IPs</div><div class="s">Baneos, lista blanca y negra</div></span></a>
+                <a class="dv-tile" href="/list/security/?<?= ltrim($back("info"), "&") ?>"><span class="ico" style="background:#C0392B"><i class="fas fa-shield-halved"></i></span><span><div class="t">Fail2ban / IPs</div><div class="s">Baneos, lista blanca y negra</div></span></a>
                 <?php endif; ?>
             </div>
         </div>
@@ -152,7 +139,7 @@
     <!-- ---- Hosting y DNS ---- -->
     <div class="dv-pane" id="pane-hosting" data-title="Hosting y DNS">
         <div class="dv-group">
-            <h3>Hosting <a class="dv-btn sec" href="<?= $editWeb ?>"><i class="fas fa-pen"></i> Editar</a></h3>
+            <h3>Hosting <a class="dv-btn sec" href="<?= $editWebHost ?>"><i class="fas fa-pen"></i> Editar</a></h3>
             <table class="dv-table">
                 <tr><th style="width:220px">Raíz de documentos</th><td style="font-family:monospace;font-size:.85rem"><?= $h($docroot) ?></td></tr>
                 <tr><th>IP</th><td><?= $h($web["IP"] ?? "") ?></td></tr>
@@ -164,7 +151,7 @@
             </table>
         </div>
         <div class="dv-group">
-            <h3>DNS <a class="dv-btn sec" href="/list/dns/?domain=<?= $u ?>"><i class="fas fa-pen"></i> Gestionar zona</a></h3>
+            <h3>DNS <a class="dv-btn sec" href="/list/dns/?domain=<?= $u . $back("hosting") ?>"><i class="fas fa-pen"></i> Gestionar zona</a></h3>
             <?php if (empty($dns)): ?>
                 <div class="dv-empty">Este dominio no tiene zona DNS en este servidor.</div>
             <?php else: ?>
@@ -184,10 +171,10 @@
     <div class="dv-pane" id="pane-mail" data-title="Correo">
         <div class="dv-group">
             <h3>Cuentas de correo de <?= $h($domain) ?>
-                <?php if ($hasMail): ?><a class="dv-btn" href="/add/mail/?domain=<?= $u ?>&token=<?= $h($tok) ?>"><i class="fas fa-plus"></i> Crear cuenta</a><a class="dv-btn sec" href="/edit/mail/?domain=<?= $u ?>&token=<?= $h($tok) ?>"><i class="fas fa-gear"></i> Config. del dominio</a><?php endif; ?>
+                <?php if ($hasMail): ?><a class="dv-btn" href="/add/mail/?domain=<?= $u . $back("mail") ?>&token=<?= $h($tok) ?>"><i class="fas fa-plus"></i> Crear cuenta</a><a class="dv-btn sec" href="/edit/mail/?domain=<?= $u . $back("mail") ?>&token=<?= $h($tok) ?>"><i class="fas fa-gear"></i> Config. del dominio</a><?php endif; ?>
             </h3>
             <?php if (!$hasMail): ?>
-                <div class="dv-empty">Este dominio no tiene correo activado. <a href="/add/mail/?token=<?= $h($tok) ?>">Añadir dominio de correo</a>.</div>
+                <div class="dv-empty">Este dominio no tiene correo activado. <a href="/add/mail/?<?= ltrim($back("mail"), "&") ?>&token=<?= $h($tok) ?>">Añadir dominio de correo</a>.</div>
             <?php elseif (empty($mail)): ?>
                 <div class="dv-empty">Sin buzones todavía.</div>
             <?php else: ?>
@@ -195,7 +182,7 @@
                     <thead><tr><th>Dirección</th><th>Cuota</th><th>Usado</th><th>Reenvío</th><th>Estado</th><th></th></tr></thead>
                     <tbody>
                     <?php foreach ($mail as $acc => $m): ?>
-                        <?php $editAcc = "/edit/mail/?" . http_build_query(["domain" => $domain, "account" => $acc, "token" => $tok]); ?>
+                        <?php $editAcc = "/edit/mail/?" . http_build_query(["domain" => $domain, "account" => $acc, "from" => $domain, "tab" => "mail", "token" => $tok]); ?>
                         <tr>
                             <td><a class="row-link" href="<?= $h($editAcc) ?>" title="Editar cuenta"><?= $h($acc) ?>@<?= $h($domain) ?></a></td>
                             <td><?= ($m["QUOTA"] ?? "unlimited") === "unlimited" ? "∞" : $h($m["QUOTA"]) . " MB" ?></td>
@@ -226,7 +213,7 @@
     <div class="dv-pane" id="pane-db" data-title="Bases de datos">
         <div class="dv-group">
             <h3>Bases de datos del usuario <?= $h($owner) ?>
-                <a class="dv-btn" href="/add/db/?token=<?= $h($tok) ?>"><i class="fas fa-plus"></i> Añadir base de datos</a>
+                <a class="dv-btn" href="/add/db/?<?= ltrim($back("db"), "&") ?>&token=<?= $h($tok) ?>"><i class="fas fa-plus"></i> Añadir base de datos</a>
                 <a class="dv-btn sec" href="<?= $h($pmaBase) ?>" target="_blank"><i class="fas fa-table"></i> phpMyAdmin</a>
             </h3>
             <p class="dv-meta" style="margin-top:0">Hestia asocia las bases de datos al usuario, no al dominio: aquí ves todas las del propietario. Pulsa el nombre para gestionar usuario y contraseña.</p>
@@ -237,7 +224,7 @@
                     <thead><tr><th>Base de datos</th><th>Usuario BD</th><th>Tipo</th><th>Host</th><th>Tamaño</th><th></th></tr></thead>
                     <tbody>
                     <?php foreach ($dbs as $name => $db): ?>
-                        <?php $editDb = "/edit/db/?" . http_build_query(["database" => $name, "token" => $tok]); ?>
+                        <?php $editDb = "/edit/db/?" . http_build_query(["database" => $name, "from" => $domain, "tab" => "db", "token" => $tok]); ?>
                         <tr>
                             <td><a class="row-link" href="<?= $h($editDb) ?>" title="Editar base de datos"><?= $h($name) ?></a></td>
                             <td><?= $h($db["DBUSER"] ?? "") ?></td>
@@ -262,10 +249,10 @@
             <h3>WordPress en <?= $h($domain) ?></h3>
             <?php if ($isWP): ?>
                 <div class="dv-empty" style="color:#212529"><i class="fab fa-wordpress" style="color:#21759B"></i> WordPress <b>detectado</b> en este dominio.
-                    <?php if ($isAdmin): ?><a class="dv-btn" style="margin-left:.6rem" href="/list/wp/">Endurecer / Escanear</a><?php endif; ?>
+                    <?php if ($isAdmin): ?><a class="dv-btn" style="margin-left:.6rem" href="/list/wp/?<?= ltrim($back("wp"), "&") ?>">Endurecer / Escanear</a><?php endif; ?>
                 </div>
             <?php else: ?>
-                <div class="dv-empty">No se ha detectado WordPress en este dominio. Puedes instalarlo desde <a href="<?= $editWeb ?>">Editar dominio → Quick Install App</a>.</div>
+                <div class="dv-empty">No se ha detectado WordPress en este dominio. Puedes instalarlo desde <a href="<?= $editWebInfo ?>">Editar dominio → Quick Install App</a>.</div>
             <?php endif; ?>
         </div>
     </div>
@@ -273,14 +260,13 @@
     <script>
     (function () {
         var tabs  = document.querySelectorAll(".dv-tab[data-pane]");
-        var crumb = document.getElementById("dv-crumb-tab");
+        var crumb = document.getElementById("dv-crumb-tab"); /* lo pinta el breadcrumb global */
         var fm    = document.getElementById("dv-fm");
         function show(name) {
             document.querySelectorAll(".dv-pane").forEach(function (p) { p.classList.toggle("active", p.id === "pane-" + name); });
             tabs.forEach(function (t) { t.classList.toggle("active", t.dataset.pane === name); });
             var pane = document.getElementById("pane-" + name);
             if (crumb && pane) { crumb.textContent = pane.dataset.title || name; }
-            // El gestor de archivos se carga solo al entrar en su pestana (lazy)
             if (name === "files" && fm && !fm.getAttribute("src")) { fm.setAttribute("src", fm.dataset.src); }
             try { history.replaceState(null, "", "#" + name); } catch (e) {}
         }
