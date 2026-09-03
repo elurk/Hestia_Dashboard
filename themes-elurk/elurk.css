@@ -1153,27 +1153,27 @@ a.login-form-link:hover {
   --font-family: "Inter", "Ubuntu", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
 
   /* --- Paleta Elurk 2026 --- */
-  --elurk-crema:    #F7F2E8;
-  --elurk-arena:    #EDE4D3;
-  --elurk-carbon:   #23211C;
-  --elurk-topo:     #8C8175;
-  --elurk-petrol:   #1F5E57;
-  --elurk-petrol-h: #17453F;
-  --elurk-coral:    #E4633E;
+  --elurk-crema:    #F4F6F8;
+  --elurk-arena:    #E9EEF2;
+  --elurk-carbon:   #212529;
+  --elurk-topo:     #6B7A88;
+  --elurk-petrol:   #1A73B8;
+  --elurk-petrol-h: #145C94;
+  --elurk-coral:    #1A73B8;
 
   /* --- Mapeo a las variables que usa Hestia --- */
   --color-primary: var(--elurk-petrol);
   --color-primary-hover: var(--elurk-petrol-h);
-  --color-primary-focus: #1f5e5740;
+  --color-primary-focus: #1a73b840;
   --color-secondary: var(--elurk-carbon);
   --color-tertiary: var(--elurk-topo);
 
   --color-light-primary: #FFFFFF;
   --color-light-secondary: var(--elurk-crema);
-  --color-light-tertiary: #DCD3C2;
+  --color-light-tertiary: #CFD8E0;
   --color-light-quaternary: var(--elurk-topo);
   --color-light-quinary: var(--elurk-arena);
-  --color-light-senary: #D8CEBB;
+  --color-light-senary: #CFD8E0;
 
   --text-primary: var(--elurk-petrol);
   --text-secondary: var(--elurk-carbon);
@@ -1187,12 +1187,12 @@ a.login-form-link:hover {
   --bg-secondary: var(--elurk-crema);
 
   --border-primary: var(--elurk-petrol);
-  --border-light-tertiary: #E2D9C8;
+  --border-light-tertiary: #E1E6EA;
 
   /* --- Propios --- */
   --elurk-radius: 12px;
   --elurk-radius-sm: 8px;
-  --elurk-shadow: 0 1px 3px rgba(35,33,28,.06), 0 4px 16px rgba(35,33,28,.05);
+  --elurk-shadow: 0 1px 3px rgba(33,37,41,.06), 0 4px 16px rgba(33,37,41,.05);
 }
 
 /* Fondo general con aire */
@@ -1202,7 +1202,7 @@ body, .app-content, .container { background: var(--bg-secondary) !important; col
 .card, .panel, .stats-item {
   border-radius: var(--elurk-radius) !important;
   box-shadow: var(--elurk-shadow) !important;
-  border: 1px solid #ECE3D2 !important;
+  border: 1px solid #E1E6EA !important;
   background: var(--bg-primary) !important;
 }
 .card-content { padding: 1.25rem !important; }
@@ -1230,12 +1230,12 @@ body, .app-content, .container { background: var(--bg-secondary) !important; col
 /* Inputs y selects: radio + foco petroleo */
 .form-control, .form-select, input[type="text"], input[type="search"], input[type="password"], select {
   border-radius: var(--elurk-radius-sm) !important;
-  border: 1px solid #DCD3C2 !important;
+  border: 1px solid #CFD8E0 !important;
   padding: .55rem .75rem !important;
 }
 .form-control:focus, .form-select:focus, input:focus, select:focus {
   border-color: var(--elurk-petrol) !important;
-  box-shadow: 0 0 0 3px #1f5e5722 !important;
+  box-shadow: 0 0 0 3px #1a73b822 !important;
   outline: none !important;
 }
 
@@ -1250,7 +1250,7 @@ body, .app-content, .container { background: var(--bg-secondary) !important; col
 }
 .units-table-row:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(35,33,28,.1), 0 8px 24px rgba(35,33,28,.07) !important;
+  box-shadow: 0 2px 6px rgba(33,37,41,.1), 0 8px 24px rgba(33,37,41,.07) !important;
 }
 .units-table-cell { padding: .85rem 1rem !important; border: none !important; background: transparent !important; }
 
@@ -1286,7 +1286,7 @@ a:hover { color: var(--elurk-petrol-h); }
   left: 0; top: 0; bottom: 0;
   width: 230px !important;
   background: #FFFFFF !important;
-  border-right: 1px solid #E2D9C8 !important;
+  border-right: 1px solid #E1E6EA !important;
   overflow-y: auto !important;
   z-index: 90 !important;
   padding-top: 60px !important;   /* hueco bajo la top-bar/logo */
@@ -1319,7 +1319,7 @@ a:hover { color: var(--elurk-petrol-h); }
 }
 /* Activo: fondo tenue + barra de acento coral a la izquierda (como Plesk) */
 .main-menu-item-link.active {
-  background: #EFF4F3 !important;
+  background: #E8F1F9 !important;
   color: var(--elurk-petrol) !important;
   box-shadow: inset 3px 0 0 var(--elurk-coral) !important;
 }
@@ -1340,3 +1340,30 @@ a:hover { color: var(--elurk-petrol-h); }
   .main-menu-list { flex-direction: row !important; flex-wrap: wrap !important; }
   .top-bar, .app-content { margin-left: 0 !important; }
 }
+
+/* ==========================================================================
+   SIDEBAR: iconos pequenos en linea con el texto, a la izquierda (estilo Plesk)
+   ========================================================================== */
+.main-menu-item-label {
+  display: flex !important;
+  align-items: center !important;
+  gap: .6rem !important;
+  margin: 0 !important;
+  font-size: .9rem !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+.main-menu-item-label i,
+.main-menu-item-label .fas,
+.main-menu-item-label .fab {
+  order: -1 !important;            /* icono a la IZQUIERDA del texto */
+  font-size: 1rem !important;      /* pequeno, no gigante */
+  width: 1.25rem !important;
+  text-align: center !important;
+  line-height: 1 !important;
+  display: inline-block !important;
+  margin: 0 !important;
+  color: var(--elurk-topo) !important;
+}
+.main-menu-item-link.active .main-menu-item-label i { color: var(--elurk-petrol) !important; }
