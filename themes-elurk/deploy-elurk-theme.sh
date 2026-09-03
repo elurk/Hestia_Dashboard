@@ -13,7 +13,10 @@
 set -u
 USER_ARG="${1:-}"
 REVERT="${2:-}"
-THEMES_DIR="/usr/local/hestia/web/css/themes"
+# Los temas PERSONALIZADOS van en css/themes/custom/ (v-list-sys-themes escanea
+# ahi *.css). La raiz css/themes/ es solo para temas del sistema y solo lee
+# *.min.css: un elurk.css ahi NO aparece en el desplegable.
+THEMES_DIR="/usr/local/hestia/web/css/themes/custom"
 SRC_DIR="$(cd "$(dirname "$0")" && pwd)"
 CONF="/usr/local/hestia/data/users/$USER_ARG/user.conf"
 
@@ -27,7 +30,8 @@ if [ "$REVERT" = "--revert" ]; then
     exit 0
 fi
 
-# 1. Copiar el CSS del tema a la carpeta de temas de Hestia
+# 1. Copiar el CSS del tema a la carpeta de temas personalizados de Hestia
+mkdir -p "$THEMES_DIR"
 cp "$SRC_DIR/elurk.css" "$THEMES_DIR/elurk.css"
 chown hestiaweb:hestiaweb "$THEMES_DIR/elurk.css" 2>/dev/null || true
 chmod 644 "$THEMES_DIR/elurk.css"
