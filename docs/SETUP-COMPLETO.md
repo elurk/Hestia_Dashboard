@@ -71,7 +71,9 @@ menú lateral (como admin) las entradas **Security** y **WordPress**.
 cd ~/Hestia_Dashboard
 cp fail2ban/zzz-elurk-overrides.local /etc/fail2ban/jail.d/
 nano /etc/fail2ban/jail.d/zzz-elurk-overrides.local   # pon tus IPs en 'ignoreip'
+fail2ban-client -t          # PRUEBA la config antes; si da error, NO reinicies
 systemctl restart fail2ban
+fail2ban-client status      # los jails de Hestia se llaman *-iptables
 ```
 
 Ahora la pestaña **Security** del panel lista las IPs baneadas y permite

@@ -11,12 +11,20 @@
 #   garantiza que este archivo se lee el ultimo y sus valores ganan, sin tocar
 #   la configuracion que instala Hestia. Para revertir, basta con borrarlo.
 #
-# APLICAR:
+# IMPORTANTE - NOMBRES DE JAIL: Hestia nombra sus jails con sufijo "-iptables"
+# (ssh-iptables, exim-iptables, dovecot-iptables, hestia-iptables...). Las
+# secciones de aqui usan EXACTAMENTE esos nombres para sobreescribir los jails
+# reales. NO inventes jails nuevos: un jail con "enabled=true" cuyo filtro no
+# exista hace que fail2ban NO ARRANQUE. Comprueba tus nombres con:
+#   fail2ban-client status
+#
+# APLICAR (siempre probando la config ANTES de reiniciar):
 #   cp zzz-elurk-overrides.local /etc/fail2ban/jail.d/
 #   # edita ignoreip abajo con las IPs fijas de tus clientes
+#   fail2ban-client -t            # <- prueba la config; si da error, NO reinicies
 #   systemctl restart fail2ban
-#   fail2ban-client status          # ver jails activos
-#   fail2ban-client status <jail>   # ver baneados de un jail
+#   fail2ban-client status                     # ver jails activos
+#   fail2ban-client status dovecot-iptables    # ver baneados de un jail
 
 [DEFAULT]
 # Lista blanca: estas IPs NUNCA se banean. Mete aqui tu oficina y las IPs
@@ -36,23 +44,14 @@ bantime.maxtime   = 24h
 
 
 # -------- CORREO: indulgente (clientes humanos que prueban contrasenas) ------
-# Nombres de jail segun los que activa Hestia. Si tu instalacion no tiene
-# alguno, fail2ban simplemente ignora esa seccion (no da error).
+# Nombres reales de los jails de correo de Hestia.
 
-[dovecot]
-enabled  = true
+[exim-iptables]
 maxretry = 6
 findtime = 10m
 bantime  = 10m
 
-[exim]
-enabled  = true
-maxretry = 6
-findtime = 10m
-bantime  = 10m
-
-[sasl]
-enabled  = true
+[dovecot-iptables]
 maxretry = 6
 findtime = 10m
 bantime  = 10m
@@ -60,16 +59,13 @@ bantime  = 10m
 
 # -------- ACCESOS SENSIBLES: duros (aqui casi todo es ataque) ----------------
 
-[sshd]
-enabled  = true
+[ssh-iptables]
 maxretry = 3
 findtime = 10m
 bantime  = 2h
 
-# Login del panel de Hestia. El filtro se llama "hestia" en instalaciones
-# estandar. Un fallo repetido aqui rara vez es un cliente torpe.
-[hestia]
-enabled  = true
+# Login del panel de Hestia.
+[hestia-iptables]
 maxretry = 3
 findtime = 10m
 bantime  = 2h

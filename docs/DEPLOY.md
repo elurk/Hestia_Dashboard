@@ -59,12 +59,13 @@ anotar los descuadres de CSS** (si aparecen) para arreglarlos viendo el render.
 cp fail2ban/zzz-elurk-overrides.local /etc/fail2ban/jail.d/
 # EDITA el archivo y pon en 'ignoreip' las IPs fijas de tus clientes y tu oficina
 nano /etc/fail2ban/jail.d/zzz-elurk-overrides.local
+fail2ban-client -t          # PRUEBA la config; si da error, NO reinicies
 systemctl restart fail2ban
 
-# Comprobar
+# Comprobar (los jails de Hestia llevan sufijo -iptables)
 fail2ban-client status
-fail2ban-client status dovecot     # ver baneados del correo
-fail2ban-client set dovecot unbanip <IP>   # desbanear a mano
+fail2ban-client status dovecot-iptables            # ver baneados del correo
+fail2ban-client set dovecot-iptables unbanip <IP>  # desbanear a mano
 ```
 
 Correo indulgente (6 intentos, baneo 10 min), SSH y panel duros (3 intentos, 2h).
