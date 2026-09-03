@@ -46,6 +46,9 @@ declare -A PATCH_MAP=(
     ["webpages/wp/index.php"]="/usr/local/hestia/web/list/wp/index.php"
     ["webpages/wp/action.php"]="/usr/local/hestia/web/list/wp/action.php"
     ["webpages/wp/list_wp.php"]="/usr/local/hestia/web/templates/pages/list_wp.php"
+    # Vista por dominio (estilo Plesk)
+    ["webpages/domain/index.php"]="/usr/local/hestia/web/list/domain/index.php"
+    ["webpages/domain/list_domain.php"]="/usr/local/hestia/web/templates/pages/list_domain.php"
 )
 
 if [ ! -d "$SRC_DIR" ]; then

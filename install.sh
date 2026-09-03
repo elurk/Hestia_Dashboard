@@ -348,13 +348,14 @@ install_admin_tabs() {
     print_status "Installing admin tabs (Security + WordPress)..."
 
     # Controladores y endpoints de cada pestana -> web/list/<tab>/
-    for tab in security wp; do
+    # (domain = vista por dominio estilo Plesk; no tiene action.php)
+    for tab in security wp domain; do
         local src="$SCRIPT_DIR/webpages/$tab"
         local dst="/usr/local/hestia/web/list/$tab"
         if [ -d "$src" ]; then
             mkdir -p "$dst"
             cp "$src/index.php"  "$dst/index.php"
-            cp "$src/action.php" "$dst/action.php"
+            [ -f "$src/action.php" ] && cp "$src/action.php" "$dst/action.php"
             chown -R hestiaweb:hestiaweb "$dst"
             find "$dst" -type f -exec chmod 644 {} \;
             chmod 755 "$dst"
@@ -369,9 +370,10 @@ install_admin_tabs() {
     if [ -d "$pages" ]; then
         cp "$SCRIPT_DIR/webpages/security/list_security.php" "$pages/list_security.php" 2>/dev/null || true
         cp "$SCRIPT_DIR/webpages/wp/list_wp.php"             "$pages/list_wp.php"       2>/dev/null || true
-        chown hestiaweb:hestiaweb "$pages/list_security.php" "$pages/list_wp.php" 2>/dev/null || true
-        chmod 644 "$pages/list_security.php" "$pages/list_wp.php" 2>/dev/null || true
-        print_status "Installed page templates: list_security.php, list_wp.php"
+        cp "$SCRIPT_DIR/webpages/domain/list_domain.php"     "$pages/list_domain.php"   2>/dev/null || true
+        chown hestiaweb:hestiaweb "$pages/list_security.php" "$pages/list_wp.php" "$pages/list_domain.php" 2>/dev/null || true
+        chmod 644 "$pages/list_security.php" "$pages/list_wp.php" "$pages/list_domain.php" 2>/dev/null || true
+        print_status "Installed page templates: list_security.php, list_wp.php, list_domain.php"
     fi
 
     # Wrappers de backend acotados -> bin/

@@ -437,14 +437,14 @@ remove_cli_command() {
 remove_admin_tabs() {
     print_status "Removing admin tabs (Security + WordPress)..."
 
-    for tab in security wp; do
+    for tab in security wp domain; do
         if [ -d "/usr/local/hestia/web/list/$tab" ]; then
             rm -rf "/usr/local/hestia/web/list/$tab"
             print_status "Removed tab: /list/$tab/"
         fi
     done
 
-    for tpl in list_security.php list_wp.php; do
+    for tpl in list_security.php list_wp.php list_domain.php; do
         if [ -f "/usr/local/hestia/web/templates/pages/$tpl" ]; then
             rm -f "/usr/local/hestia/web/templates/pages/$tpl"
         fi

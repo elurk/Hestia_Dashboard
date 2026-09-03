@@ -463,6 +463,13 @@
 					<?php } ?>
 				<?php } ?>
 
+				<!-- Dominios (vista por dominio estilo Plesk) - Dashboard Manager, todos los usuarios -->
+				<li class="main-menu-item">
+					<a class="main-menu-item-link <?php if ($TAB == "DOMAIN") { echo "active"; } ?>" href="/list/domain/" title="<?= _("Domains") ?>">
+						<p class="main-menu-item-label">Dominios<i class="fas fa-sitemap"></i></p>
+					</a>
+				</li>
+
 				<!-- Security (Fail2ban) tab - Dashboard Manager, admin only -->
 				<?php if (($_SESSION["userContext"] ?? "") === "admin") { ?>
 					<li class="main-menu-item">

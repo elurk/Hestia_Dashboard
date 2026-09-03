@@ -1367,3 +1367,11 @@ a:hover { color: var(--elurk-petrol-h); }
   color: var(--elurk-topo) !important;
 }
 .main-menu-item-link.active .main-menu-item-label i { color: var(--elurk-petrol) !important; }
+
+/* ==========================================================================
+   Lineas a ancho completo: items del sidebar de lado a lado y contenido sin
+   contenedor centrado (como Plesk).
+   ========================================================================== */
+.main-menu-list { padding: .25rem 0 !important; }
+.main-menu-item-link { border-radius: 0 !important; padding: .65rem 1.1rem !important; }
+.container, .app-content .container { max-width: none !important; width: 100% !important; margin: 0 !important; padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
