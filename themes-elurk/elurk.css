@@ -1375,3 +1375,24 @@ a:hover { color: var(--elurk-petrol-h); }
 .main-menu-list { padding: .25rem 0 !important; }
 .main-menu-item-link { border-radius: 0 !important; padding: .65rem 1.1rem !important; }
 .container, .app-content .container { max-width: none !important; width: 100% !important; margin: 0 !important; padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
+
+/* ==========================================================================
+   SIDEBAR MINIMO: solo Dominios, Usuarios y Seguridad. El resto (Web, DNS,
+   Correo, BBDD, Cron, Respaldos, WordPress) se alcanza desde las pestanas del
+   propio dominio, asi que se ocultan del menu lateral.
+   ========================================================================== */
+.main-menu-item-link[href="/list/web/"],
+.main-menu-item-link[href="/list/dns/"],
+.main-menu-item-link[href="/list/mail/"],
+.main-menu-item-link[href="/list/db/"],
+.main-menu-item-link[href="/list/cron/"],
+.main-menu-item-link[href="/list/backup/"],
+.main-menu-item-link[href="/list/wp/"] { display: none !important; }
+/* Y el <li> contenedor, en navegadores con :has() */
+.main-menu-item:has(> .main-menu-item-link[href="/list/web/"]),
+.main-menu-item:has(> .main-menu-item-link[href="/list/dns/"]),
+.main-menu-item:has(> .main-menu-item-link[href="/list/mail/"]),
+.main-menu-item:has(> .main-menu-item-link[href="/list/db/"]),
+.main-menu-item:has(> .main-menu-item-link[href="/list/cron/"]),
+.main-menu-item:has(> .main-menu-item-link[href="/list/backup/"]),
+.main-menu-item:has(> .main-menu-item-link[href="/list/wp/"]) { display: none !important; }

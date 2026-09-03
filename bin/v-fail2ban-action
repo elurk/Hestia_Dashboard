@@ -17,6 +17,8 @@
 # persistente y reversible desde Server -> Firewall.
 
 set -u
+# sudo resetea PATH (secure_path) y deja fuera los comandos v-* de Hestia.
+export PATH="/usr/local/hestia/bin:$PATH"
 WL_FILE="/etc/fail2ban/jail.d/zzz-elurk-overrides.local"
 
 json_err() { echo "{\"ok\":false,\"error\":\"$1\"}"; exit 0; }

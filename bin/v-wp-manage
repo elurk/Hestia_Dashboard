@@ -10,6 +10,8 @@
 # directorios /home de otros usuarios.
 
 set -u
+# sudo resetea PATH (secure_path) y deja fuera los comandos v-* de Hestia.
+export PATH="/usr/local/hestia/bin:$PATH"
 HARDEN_BIN="/usr/local/hestia/bin/hestia-wp-harden"
 
 json_err() { echo "{\"ok\":false,\"error\":\"$1\"}"; exit 0; }
