@@ -1463,3 +1463,23 @@ header.app-header, .top-bar, .top-bar-inner, .container.top-bar-inner {
 .button.button-secondary:hover, .button.button-back:hover { background: #DCE4EA !important; }
 .button.button-danger, .button.button-danger * { background: #C0392B !important; border-color: #C0392B !important; color: #FFFFFF !important; }
 .button:disabled, .button.disabled { opacity: .55 !important; }
+
+/* ==========================================================================
+   SIDEBAR OSCURO estilo Plesk Obsidian: fondo slate, lineas PLANAS de borde a
+   borde (sin radios, bordes ni sombras: nada que parezca boton incrustado),
+   icono y texto BLANCOS, hover azul claro, activo azul.
+   ========================================================================== */
+.main-menu { background: #263544 !important; border-right: none !important; box-shadow: none !important; }
+.main-menu-list { padding: .5rem 0 !important; gap: 0 !important; }
+.main-menu-item, .main-menu-item + .main-menu-item { border: none !important; background: transparent !important; margin: 0 !important; }
+.main-menu-item-link {
+  border-radius: 0 !important; padding: .72rem 1.15rem !important;
+  color: #FFFFFF !important; background: transparent !important;
+  box-shadow: none !important; border: none !important;
+}
+.main-menu-item-link:hover { background: rgba(120, 180, 240, .28) !important; color: #FFFFFF !important; }
+.main-menu-item-link.active { background: #1A73B8 !important; color: #FFFFFF !important; box-shadow: none !important; }
+.main-menu-item-label, .main-menu-item-label i, .main-menu-item-label .fas, .main-menu-item-label .fab,
+.main-menu-item-link.active .main-menu-item-label i, .main-menu-item-link:hover .main-menu-item-label i { color: #FFFFFF !important; }
+/* Zona superior del sidebar (bajo la barra blanca) en el mismo slate */
+.main-menu::before { content: ""; display: block; height: 0; }
