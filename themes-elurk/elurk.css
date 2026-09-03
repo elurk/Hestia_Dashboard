@@ -1511,13 +1511,15 @@ header.app-header, .top-bar, .top-bar-inner, .container.top-bar-inner {
    es blanco, asi que se ve sobre el slate. El header ya no lleva logo.
    ========================================================================== */
 .main-menu { padding-top: 0 !important; }
-/* (padding con !important: la regla ".main-menu > div { padding:0 }" de arriba lo anularia) */
-.main-menu-brand {
-  height: 60px !important; display: flex !important; align-items: center !important; padding: 0 1.1rem !important;
-  border-bottom: 1px solid rgba(255, 255, 255, .08) !important;
+/* Selector ".main-menu > .main-menu-brand" (0,2,0): gana a ".main-menu > div { padding:0 }"
+   (0,1,1) de arriba, que dejaba el logo pegado al borde izquierdo. */
+.main-menu > .main-menu-brand, .main-menu-brand {
+  height: 60px !important; display: flex !important; align-items: center !important;
+  padding: 0 1.25rem !important; margin: 0 !important; width: 100% !important; box-sizing: border-box !important;
+  overflow: visible !important; border-bottom: 1px solid rgba(255, 255, 255, .08) !important;
 }
-.main-menu-brand a { display: inline-flex; align-items: center; line-height: 0; }
-.main-menu-brand img { height: 28px; width: auto; }
+.main-menu > .main-menu-brand a { display: inline-flex !important; align-items: center !important; line-height: 0 !important; padding: 0 !important; margin: 0 !important; }
+.main-menu > .main-menu-brand img { height: 28px !important; width: auto !important; margin: 0 !important; display: block !important; }
 .top-bar-logo { display: none !important; }
 @media (max-width: 900px) { .main-menu-brand { height: 48px; } }
 
