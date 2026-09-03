@@ -335,6 +335,18 @@ install_update_protection() {
             print_status "File manager: tema claro (re)aplicado en hst-custom.css"
         fi
     fi
+
+    # Tema Elurk (css/themes/custom/elurk.css): se despliega aqui mismo para no
+    # depender de un cp manual tras cada git pull, y se guarda en reapply-src
+    # para que la proteccion anti-updates lo reponga si un update lo borra.
+    if [ -f "$SCRIPT_DIR/themes-elurk/elurk.css" ]; then
+        cp "$SCRIPT_DIR/themes-elurk/elurk.css" "$src_dir/elurk.css"
+        mkdir -p "$HESTIA_WEB_DIR/css/themes/custom"
+        cp "$SCRIPT_DIR/themes-elurk/elurk.css" "$HESTIA_WEB_DIR/css/themes/custom/elurk.css"
+        chown hestiaweb:hestiaweb "$HESTIA_WEB_DIR/css/themes/custom/elurk.css" 2>/dev/null || true
+        chmod 644 "$HESTIA_WEB_DIR/css/themes/custom/elurk.css"
+        print_status "Tema Elurk desplegado en css/themes/custom/elurk.css"
+    fi
     chown -R hestiaweb:hestiaweb "$src_dir" 2>/dev/null || true
     find "$src_dir" -type d -exec chmod 755 {} \;
     find "$src_dir" -type f -exec chmod 644 {} \;

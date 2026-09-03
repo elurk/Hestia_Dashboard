@@ -126,6 +126,19 @@ if [ -f "$FM_CSS" ] && [ -f "$SRC_DIR/fm-light.css" ]; then
     fi
 fi
 
+# Tema Elurk (css/themes/custom/elurk.css): reponerlo si falta o difiere de la
+# copia guardada en reapply-src (un update de Hestia puede vaciar custom/).
+ELURK_CSS="/usr/local/hestia/web/css/themes/custom/elurk.css"
+if [ -f "$SRC_DIR/elurk.css" ] && ! cmp -s "$SRC_DIR/elurk.css" "$ELURK_CSS"; then
+    mkdir -p "$(dirname "$ELURK_CSS")"
+    if cp "$SRC_DIR/elurk.css" "$ELURK_CSS"; then
+        chown "$WEB_USER":"$WEB_USER" "$ELURK_CSS" 2>/dev/null || true
+        chmod 644 "$ELURK_CSS"
+        log "Reaplicado tema Elurk en $ELURK_CSS"
+        reapplied=$((reapplied + 1))
+    fi
+fi
+
 # Re-parchear v-list-sys-config para exponer ALT_DASHBOARD (una actualizacion
 # lo revierte a su version de fabrica sin nuestra clave en el whitelist).
 SYS_CONFIG_BIN="/usr/local/hestia/bin/v-list-sys-config"

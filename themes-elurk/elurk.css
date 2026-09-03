@@ -1535,6 +1535,15 @@ header.app-header, .top-bar, .top-bar-inner, .container.top-bar-inner {
       avisos y menus nativos de Hestia.
    ========================================================================== */
 html[data-elurk-theme="dark"] {
+  /* Paleta Elurk (de ella cuelgan --bg-*, --text-*, --color-* del bloque TEMA ELURK 2026) */
+  --elurk-crema:  #1F262C;   /* fondo de pagina */
+  --elurk-arena:  #3A434C;   /* botones secundarios, fondos tenues */
+  --elurk-carbon: #E4E8EC;   /* texto */
+  --elurk-topo:   #9AA5B1;   /* texto atenuado / etiquetas */
+  --elurk-shadow: 0 1px 3px rgba(0,0,0,.35), 0 4px 16px rgba(0,0,0,.3);
+  /* Literales del mismo bloque que NO pasan por la paleta */
+  --bg-primary: #2A3138;               /* tarjetas, formularios, tablas */
+  --border-light-tertiary: #3A434C;
   --color-secondary: #E4E8EC;
   --color-light-primary: #2A3138;
   --color-light-secondary: #1F262C;
@@ -1567,6 +1576,17 @@ html[data-elurk-theme="dark"] .top-bar-menu-link:hover,
 html[data-elurk-theme="dark"] .top-bar-menu-link.active { background: #34404B !important; color: #9CC7F5 !important; }
 html[data-elurk-theme="dark"] .top-bar-notifications-panel,
 html[data-elurk-theme="dark"] .top-bar-menu-panel { background: #2A3138 !important; border-color: #3A434C !important; }
+
+/* Bordes claros fijos del bloque TEMA ELURK 2026 (tarjetas, inputs) */
+html[data-elurk-theme="dark"] .card, html[data-elurk-theme="dark"] .panel, html[data-elurk-theme="dark"] .stats-item,
+html[data-elurk-theme="dark"] .form-control, html[data-elurk-theme="dark"] .form-select,
+html[data-elurk-theme="dark"] input[type="text"], html[data-elurk-theme="dark"] input[type="search"],
+html[data-elurk-theme="dark"] input[type="password"], html[data-elurk-theme="dark"] select { border-color: #3A434C !important; }
+html[data-elurk-theme="dark"] .form-container, html[data-elurk-theme="dark"] .form-container-wide,
+html[data-elurk-theme="dark"] .units-table.js-units-container, html[data-elurk-theme="dark"] .shortcuts,
+html[data-elurk-theme="dark"] .stats, html[data-elurk-theme="dark"] .app-footer, html[data-elurk-theme="dark"] .collapse-header,
+html[data-elurk-theme="dark"] .modal-options { background: #2A3138 !important; border-color: #3A434C !important; }
+html[data-elurk-theme="dark"] .form-control:focus, html[data-elurk-theme="dark"] .form-select:focus { box-shadow: 0 0 0 3px #1a73b855 !important; }
 
 html[data-elurk-theme="dark"] .main-menu { background: #1B2127 !important; }
 html[data-elurk-theme="dark"] .main-menu-item-link:hover { background: rgba(120, 180, 240, .18) !important; }
