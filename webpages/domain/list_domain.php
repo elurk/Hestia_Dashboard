@@ -303,10 +303,44 @@
             // Archivos: cargar el FM en su raiz y, una vez cargado, cambiar el hash a
             // #/?cd=<ruta> para que FileGator (router hash) entre en el docroot.
             if (name === "files" && fm && !fm.getAttribute("src")) {
+                // Estilos inyectados en el iframe (mismo origen): tema CLARO con la
+                // paleta del panel, sin la barra superior de FileGator (logo, salir...)
+                // y a ancho completo. No depende del CSS del servidor ni de su cache.
+                var FM_CSS = [
+                    "html,body,.navbar{background:#F4F6F8!important;color:#212529!important}",
+                    ".navbar{display:none!important}",
+                    ".container,.section,.hero,.main{max-width:100%!important;width:100%!important;padding:.35rem .5rem!important;margin:0!important}",
+                    ".table.is-hoverable tbody tr:nth-child(odd){background:#FFFFFF!important}",
+                    ".table.is-hoverable tbody tr:nth-child(even){background:#FAFBFC!important}",
+                    ".table.is-hoverable tbody tr:not(.is-selected):hover{background:#E8F1F9!important}",
+                    ".table td,.table th{color:#212529!important;border-color:#EEF1F4!important}",
+                    ".table tr.is-selected,.is-selected{background:#D6E7F5!important;color:#212529!important}",
+                    ".file-row.type-file a.name:not([data-v])::before{color:#6B7A88!important}",
+                    ".breadcrumb a:not([data-v]){background:#FFFFFF!important;color:#1A73B8!important;border:1px solid #E1E6EA!important}",
+                    ".breadcrumb a:not([data-v]):hover{background:#E8F1F9!important;color:#145C94!important}",
+                    ".breadcrumb li+li::before{color:#B0BAC4!important}",
+                    ".dropdown-trigger .button{color:#212529!important}",
+                    ".dropdown-trigger .button:hover{color:#1A73B8!important;background:#E8F1F9!important;border-radius:6px!important}",
+                    ".button.is-primary,.tree-list .button.is-primary{background:#1A73B8!important;border-color:#1A73B8!important;color:#fff!important}",
+                    ".button.is-primary:hover,.tree-list .button.is-primary:hover{background:#145C94!important}",
+                    ".tree-list a:not([data-v]):hover{background:#E8F1F9!important}",
+                    ".box,.progress-box .box,.modal-card,.modal-card-body,.modal-card-head,.modal-card-foot,.dropdown-content{background:#FFFFFF!important;color:#212529!important}",
+                    "a,.has-text-primary{color:#1A73B8!important}"
+                ].join("");
+                function injectFmStyle() {
+                    try {
+                        var d = fm.contentDocument;
+                        if (!d || !d.head || d.getElementById("elurk-fm-embed")) { return; }
+                        var st = d.createElement("style"); st.id = "elurk-fm-embed"; st.textContent = FM_CSS;
+                        d.head.appendChild(st);
+                    } catch (e) {}
+                }
                 fm.addEventListener("load", function onload() {
                     fm.removeEventListener("load", onload);
+                    injectFmStyle();
                     setTimeout(function () {
                         try { fm.contentWindow.location.hash = fm.dataset.hash; } catch (e) {}
+                        injectFmStyle(); // por si la SPA re-renderizo el head
                     }, 400);
                 });
                 fm.setAttribute("src", fm.dataset.base);
