@@ -196,21 +196,8 @@
 								</button>
 							</li>
 
-							<!-- File Manager -->
-							<?php if (isset($_SESSION["FILE_MANAGER"]) && !empty($_SESSION["FILE_MANAGER"]) && $_SESSION["FILE_MANAGER"] == "true") { ?>
-								<?php if ($_SESSION["userContext"] === "admin" && $_SESSION["look"] === "admin" && $_SESSION["POLICY_SYSTEM_PROTECTED_ADMIN"] == "yes") { ?>
-									<!-- Hide file manager when impersonating admin-->
-								<?php } else { ?>
-									<li class="top-bar-menu-item">
-										<a title="<?= _("File manager") ?>" class="top-bar-menu-link <?php if ($TAB == "FM") {
-	echo "active";
-} ?>" href="/fm/">
-											<i class="fas fa-folder-open"></i>
-											<span class="top-bar-menu-link-label u-hide-desktop"><?= _("File manager") ?></span>
-										</a>
-									</li>
-								<?php } ?>
-							<?php } ?>
+							<!-- File Manager: retirado de la barra superior (fork Elurk). Al gestor se
+							     entra desde la pestana "Archivos" de cada dominio, ya en su docroot. -->
 
 							<!-- Web Terminal -->
 							<?php if (isset($_SESSION["WEB_TERMINAL"]) && !empty($_SESSION["WEB_TERMINAL"]) && $_SESSION["WEB_TERMINAL"] == "true") { ?>
