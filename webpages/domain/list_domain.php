@@ -77,7 +77,10 @@
     $isSSL = (($web["SSL"] ?? "no") === "yes");
     // phpMyAdmin SSO (mismo esquema que Hestia en list_db): se firma con el
     // PROPIETARIO de la BD, igual que hace Hestia al impersonar.
-    $pmaBase = "https://" . ($_SERVER["HTTP_HOST"] ?? "") . "/" . ($_SESSION["DB_PMA_ALIAS"] ?? "phpmyadmin") . "/";
+    // Igual que Hestia (list_db.php): host SIN el puerto del panel (:8083) y URL
+    // relativa al protocolo -> phpMyAdmin lo sirve el servidor web en el 443.
+    [$__pmaHost] = explode(":", ($_SERVER["HTTP_HOST"] ?? "") . ":");
+    $pmaBase = "//" . $__pmaHost . "/" . (!empty($_SESSION["DB_PMA_ALIAS"]) ? $_SESSION["DB_PMA_ALIAS"] : "phpmyadmin") . "/";
     $pmaSso = isset($_SESSION["PHPMYADMIN_KEY"]) && $_SESSION["PHPMYADMIN_KEY"] !== "" && function_exists("ipUsed") && !ipUsed();
     $pmaLink = function (string $dbName, array $db) use ($pmaBase, $pmaSso, $owner): string {
         if (!$pmaSso || (($db["TYPE"] ?? "") !== "mysql")) { return $pmaBase; }
