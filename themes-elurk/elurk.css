@@ -1483,3 +1483,13 @@ header.app-header, .top-bar, .top-bar-inner, .container.top-bar-inner {
 .main-menu-item-link.active .main-menu-item-label i, .main-menu-item-link:hover .main-menu-item-label i { color: #FFFFFF !important; }
 /* Zona superior del sidebar (bajo la barra blanca) en el mismo slate */
 .main-menu::before { content: ""; display: block; height: 0; }
+
+/* El .container que Hestia usa DENTRO del sidebar heredaba el padding global de
+   1.5rem -> las lineas del menu quedaban encajonadas (aspecto "incrustado").
+   Dentro del sidebar: sin padding ni margen, ancho total, y sin nada decorativo. */
+.main-menu .container, .main-menu > div, .main-menu-inner {
+  padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: none !important;
+  background: transparent !important; border: none !important; box-shadow: none !important;
+}
+.main-menu ul, .main-menu li { list-style: none !important; margin: 0 !important; }
+.main-menu button.u-hide-tablet, .main-menu .main-menu-toggle { display: none !important; }
