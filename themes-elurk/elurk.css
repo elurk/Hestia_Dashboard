@@ -1274,3 +1274,69 @@ body, .app-content, .container { background: var(--bg-secondary) !important; col
 /* Enlaces */
 a { color: var(--elurk-petrol); }
 a:hover { color: var(--elurk-petrol-h); }
+
+/* ==========================================================================
+   LAYOUT SIDEBAR (estilo Plesk) — v1, iterar con capturas del lab
+   Convierte el menu horizontal de Hestia en una barra lateral izquierda clara.
+   ========================================================================== */
+
+/* Menu principal -> columna lateral fija, clara, con borde (como Plesk) */
+.main-menu {
+  position: fixed !important;
+  left: 0; top: 0; bottom: 0;
+  width: 230px !important;
+  background: #FFFFFF !important;
+  border-right: 1px solid #E2D9C8 !important;
+  overflow-y: auto !important;
+  z-index: 90 !important;
+  padding-top: 60px !important;   /* hueco bajo la top-bar/logo */
+  margin: 0 !important;
+}
+
+/* Forzar la lista visible en escritorio (Hestia la togglea con Alpine x-show) */
+.main-menu-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  padding: .5rem !important;
+  width: 100% !important;
+}
+.main-menu-item { width: 100% !important; }
+
+.main-menu-item-link {
+  display: flex !important;
+  align-items: center !important;
+  gap: .55rem !important;
+  padding: .6rem .85rem !important;
+  border-radius: 8px !important;
+  color: var(--elurk-carbon) !important;
+  white-space: nowrap !important;
+  font-weight: 500 !important;
+}
+.main-menu-item-link:hover {
+  background: var(--elurk-crema) !important;
+  color: var(--elurk-petrol) !important;
+}
+/* Activo: fondo tenue + barra de acento coral a la izquierda (como Plesk) */
+.main-menu-item-link.active {
+  background: #EFF4F3 !important;
+  color: var(--elurk-petrol) !important;
+  box-shadow: inset 3px 0 0 var(--elurk-coral) !important;
+}
+.main-menu-item-link.active::after { display: none !important; }
+
+/* Ocultar los sub-stats del menu para un sidebar compacto tipo Plesk */
+.main-menu-stats { display: none !important; }
+
+/* Top bar: arranca tras el sidebar */
+.top-bar { margin-left: 230px !important; }
+
+/* Contenido: desplazado a la derecha del sidebar */
+.app-content { margin-left: 230px !important; padding: 1.5rem !important; }
+
+/* Responsive: en pantallas estrechas, volver al flujo normal */
+@media (max-width: 900px) {
+  .main-menu { position: static !important; width: 100% !important; height: auto !important; padding-top: 0 !important; border-right: none !important; }
+  .main-menu-list { flex-direction: row !important; flex-wrap: wrap !important; }
+  .top-bar, .app-content { margin-left: 0 !important; }
+}

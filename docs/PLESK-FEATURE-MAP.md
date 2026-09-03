@@ -63,13 +63,18 @@ Leyenda: ✅ nativo Hestia · 🔶 construible (mapeo/custom) · ⚠️ parcial 
 - Imunify360 / Advisor — ❌ (Imunify es de pago de terceros; Advisor es propietario Plesk)
 - IP Access Restriction — ✅ (firewall)
 
-## Usuarios y permisos (EL PUNTO DIFÍCIL)
-- Clientes / Revendedores — ⚠️ (Hestia: usuarios y ¿reseller? limitado)
-- Suscripciones / Planes de servicio — 🔶 (Hestia: paquetes/packages ≈ planes)
-- Usuarios adicionales con ROL (Admin/WebMaster/Application User/Contable/
-  Limited Webmaster) acotados a suscripciones — 🔒 **NO nativo en Hestia**. Hestia:
-  admin vs user (dueño de sus dominios), sin subusuarios con roles granulares por
-  dominio. Replicarlo = capa de permisos propia (grande, frágil). Decisión pendiente.
+## Usuarios y permisos (MATIZADO — mejor de lo que parecía)
+- **Usuario con acceso SOLO a su dominio** — ✅ NATIVO. El modelo de Hestia ES este:
+  creas una cuenta de usuario, le asignas su(s) dominio(s), y al entrar SOLO ve lo
+  suyo, aislado por usuario del sistema. Cubre el caso de negocio principal (un dev
+  monta una web en tu hosting y solo toca su dominio). Aquí ya se ahorra Plesk.
+- Clientes / Revendedores — ⚠️ (Hestia: usuarios; reseller limitado)
+- Suscripciones / Planes de servicio — 🔶 (Hestia: packages ≈ planes)
+- **Roles granulares** (Admin/WebMaster/Application User/Contable/Limited Webmaster
+  con permisos distintos sobre el MISMO dominio) — 🔶 NO nativo, pero CONSTRUIBLE en
+  el fork: como controlamos la UI, añadimos una capa de "rol" que muestra/oculta
+  pestañas y acciones según el rol asignado, encima del aislamiento real de Hestia.
+  No tan profundo como Plesk a nivel seguridad, pero cubre lo práctico. Medio esfuerzo.
 - Roles de usuario de BD — ⚠️
 
 ## Administración del servidor
