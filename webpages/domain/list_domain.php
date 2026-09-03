@@ -85,6 +85,14 @@
     // Igual que Hestia (list_db.php): host SIN el puerto del panel (:8083) y URL
     // relativa al protocolo -> phpMyAdmin lo sirve el servidor web en el 443.
     [$__pmaHost] = explode(":", ($_SERVER["HTTP_HOST"] ?? "") . ":");
+    // Si se accede al panel por IP pelada, el vhost de la IP no sirve phpMyAdmin/
+    // webmail (Hestia los sirve en el vhost del HOSTNAME del servidor): usar el
+    // hostname real (get_hostname() de Hestia) en ese caso.
+    if (filter_var($__pmaHost, FILTER_VALIDATE_IP) && function_exists("get_hostname")) {
+        $__hn = trim((string) get_hostname());
+        if ($__hn !== "") { $__pmaHost = $__hn; }
+    }
+    $srvHost = $__pmaHost;
     $pmaBase = "//" . $__pmaHost . "/" . (!empty($_SESSION["DB_PMA_ALIAS"]) ? $_SESSION["DB_PMA_ALIAS"] : "phpmyadmin") . "/";
     $pmaSso = isset($_SESSION["PHPMYADMIN_KEY"]) && $_SESSION["PHPMYADMIN_KEY"] !== "" && function_exists("ipUsed") && !ipUsed();
     $pmaLink = function (string $dbName, array $db) use ($pmaBase, $pmaSso, $owner): string {
@@ -190,8 +198,11 @@
                 // Webmail (Roundcube) integrado de Hestia: mismo host sin el puerto del
                 // panel, alias WEBMAIL_ALIAS (por defecto "webmail"). Roundcube acepta
                 // ?_user= para dejar la direccion ya rellenada en el login.
-                [$__wmHost] = explode(":", ($_SERVER["HTTP_HOST"] ?? "") . ":");
-                $webmailBase = "//" . $__wmHost . "/" . (!empty($_SESSION["WEBMAIL_ALIAS"]) ? $_SESSION["WEBMAIL_ALIAS"] : "webmail") . "/";
+                // Igual que Hestia (list_mail_acc.php): el webmail vive en el subdominio
+                // <WEBMAIL_ALIAS>.<dominio> (por defecto webmail.dominio), en http como
+                // hace Hestia. Requiere que ese subdominio resuelva por DNS (en un lab
+                // por IP: entrada en /etc/hosts o probar por hostname).
+                $webmailBase = "http://" . (!empty($_SESSION["WEBMAIL_ALIAS"]) ? $_SESSION["WEBMAIL_ALIAS"] : "webmail") . "." . $domain . "/";
                 $fmtList = function ($v) use ($h): string {
                     $v = trim((string) $v);
                     if ($v === "" || $v === "no") { return '<span style="color:#B0BAC4">—</span>'; }
