@@ -322,11 +322,17 @@ install_update_protection() {
     local fm_css="/usr/local/hestia/web/fm/css/hst-custom.css"
     if [ -f "$SCRIPT_DIR/themes-elurk/fm-light.css" ]; then
         cp "$SCRIPT_DIR/themes-elurk/fm-light.css" "$src_dir/fm-light.css"
-        if [ -f "$fm_css" ] && ! grep -q "ELURK-FM-LIGHT" "$fm_css"; then
+        if [ -f "$fm_css" ]; then
             mkdir -p "$BACKUP_DIR/original-files"
-            [ -f "$BACKUP_DIR/original-files/hst-custom.css" ] || cp "$fm_css" "$BACKUP_DIR/original-files/hst-custom.css"
+            if grep -q "ELURK-FM-LIGHT" "$fm_css"; then
+                # Ya habia un bloque nuestro: se retira (siempre va al final) para
+                # REFRESCARLO con la version actual del repo.
+                sed -i '/ELURK-FM-LIGHT/,$d' "$fm_css"
+            else
+                [ -f "$BACKUP_DIR/original-files/hst-custom.css" ] || cp "$fm_css" "$BACKUP_DIR/original-files/hst-custom.css"
+            fi
             cat "$SCRIPT_DIR/themes-elurk/fm-light.css" >> "$fm_css"
-            print_status "File manager: tema claro anadido a hst-custom.css"
+            print_status "File manager: tema claro (re)aplicado en hst-custom.css"
         fi
     fi
     chown -R hestiaweb:hestiaweb "$src_dir" 2>/dev/null || true

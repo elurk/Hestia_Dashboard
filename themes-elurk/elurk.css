@@ -1437,3 +1437,7 @@ a:hover { color: var(--elurk-petrol-h); }
    ========================================================================== */
 [x-show="showAdvanced"] { display: block !important; }
 button[x-on\:click*="showAdvanced"], button[\@click*="showAdvanced"] { display: none !important; }
+
+/* Barra superior del panel: texto siempre oscuro sobre fondo claro (por si algun
+   texto heredaba blanco del tema oscuro de Hestia). Iconos de la barra incluidos. */
+.top-bar, .top-bar *, .top-bar-usage, .top-bar-usage-item, .top-bar-usage-item * , .top-bar-menu-link { color: var(--elurk-carbon) !important; }

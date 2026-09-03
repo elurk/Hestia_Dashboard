@@ -21,3 +21,9 @@ html, body, .navbar { background-color: #F4F6F8 !important; color: #212529 !impo
 .progress-box .box, .box, .modal-card, .modal-card-body, .modal-card-head, .modal-card-foot { background: #FFFFFF !important; color: #212529 !important; }
 a, .has-text-primary { color: #1A73B8 !important; }
 .is-selected, .table tr.is-selected { background-color: #D6E7F5 !important; color: #212529 !important; }
+/* Texto OSCURO en todo el gestor (el css oscuro de Hestia deja textos en blanco) */
+body, p, span, li, td, th, label, .label, .title, .subtitle, .help, .table, .file-row a, .file-row a.name, .breadcrumb li, .dropdown-item, .dropdown-content, .tree-list, .tree-list a, .pagination-link, .modal-card, .box, .card, .card-content, .navbar-item, .level-item, .column, .input, .textarea, .select select { color: #212529 !important; }
+.input, .textarea, .select select { background: #FFFFFF !important; border-color: #CFD8E0 !important; }
+.input::placeholder, .textarea::placeholder { color: #8A96A3 !important; }
+/* ...salvo dentro de botones/etiquetas primarios, que van en blanco */
+.button.is-primary, .button.is-primary *, .tag.is-primary, .tag.is-primary *, .is-selected .tag { color: #fff !important; }

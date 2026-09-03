@@ -325,7 +325,13 @@
                     ".button.is-primary:hover,.tree-list .button.is-primary:hover{background:#145C94!important}",
                     ".tree-list a:not([data-v]):hover{background:#E8F1F9!important}",
                     ".box,.progress-box .box,.modal-card,.modal-card-body,.modal-card-head,.modal-card-foot,.dropdown-content{background:#FFFFFF!important;color:#212529!important}",
-                    "a,.has-text-primary{color:#1A73B8!important}"
+                    "a,.has-text-primary{color:#1A73B8!important}",
+                    /* Texto OSCURO en todo el gestor (el css oscuro de Hestia deja textos en blanco) */
+                    "body,p,span,li,td,th,label,.label,.title,.subtitle,.help,.table,.file-row a,.file-row a.name,.breadcrumb li,.dropdown-item,.dropdown-content,.tree-list,.tree-list a,.pagination-link,.modal-card,.box,.card,.card-content,.navbar-item,.level-item,.column,.input,.textarea,.select select{color:#212529!important}",
+                    ".input,.textarea,.select select{background:#FFFFFF!important;border-color:#CFD8E0!important}",
+                    ".input::placeholder,.textarea::placeholder{color:#8A96A3!important}",
+                    /* ...salvo dentro de los botones/etiquetas primarios, que van en blanco */
+                    ".button.is-primary,.button.is-primary *,.tag.is-primary,.tag.is-primary *,.is-selected .tag{color:#fff!important}"
                 ].join("");
                 function injectFmStyle() {
                     try {

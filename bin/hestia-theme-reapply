@@ -107,10 +107,23 @@ done
 # hst-custom.css (oscuro segun el sistema). Si falta nuestro marcador, se
 # vuelve a anadir el bloque claro al final.
 FM_CSS="/usr/local/hestia/web/fm/css/hst-custom.css"
-if [ -f "$FM_CSS" ] && [ -f "$SRC_DIR/fm-light.css" ] && ! grep -q "ELURK-FM-LIGHT" "$FM_CSS"; then
-    cat "$SRC_DIR/fm-light.css" >> "$FM_CSS"
-    log "Reaplicado tema claro del gestor de archivos en $FM_CSS"
-    reapplied=$((reapplied + 1))
+if [ -f "$FM_CSS" ] && [ -f "$SRC_DIR/fm-light.css" ]; then
+    if grep -q "ELURK-FM-LIGHT" "$FM_CSS"; then
+        # Hay bloque: comparar el tramo desde el marcador con la version actual;
+        # si difiere (el repo cambio el css), refrescarlo.
+        cur=$(sed -n '/ELURK-FM-LIGHT/,$p' "$FM_CSS")
+        new=$(sed -n '/ELURK-FM-LIGHT/,$p' "$SRC_DIR/fm-light.css")
+        if [ "$cur" != "$new" ]; then
+            sed -i '/ELURK-FM-LIGHT/,$d' "$FM_CSS"
+            cat "$SRC_DIR/fm-light.css" >> "$FM_CSS"
+            log "Refrescado tema claro del gestor de archivos en $FM_CSS"
+            reapplied=$((reapplied + 1))
+        fi
+    else
+        cat "$SRC_DIR/fm-light.css" >> "$FM_CSS"
+        log "Reaplicado tema claro del gestor de archivos en $FM_CSS"
+        reapplied=$((reapplied + 1))
+    fi
 fi
 
 # Re-parchear v-list-sys-config para exponer ALT_DASHBOARD (una actualizacion
