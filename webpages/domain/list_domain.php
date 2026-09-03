@@ -29,6 +29,20 @@
 .dv-btn { display:inline-block; padding:.45rem .9rem; border-radius:6px; background:#1A73B8; color:#fff !important; text-decoration:none; font-size:.85rem; font-weight:500; }
 .dv-btn.sec { background:#E9EEF2; color:#212529 !important; }
 .dv-fm { width:100%; height:calc(100vh - 280px); min-height:520px; border:1px solid #E1E6EA; border-radius:8px; background:#fff; }
+/* Modo oscuro (boton de la barra superior, html[data-elurk-theme="dark"]) */
+html[data-elurk-theme="dark"] .dv-head h1 { color:#E4E8EC; }
+html[data-elurk-theme="dark"] .dv-head .dv-meta, html[data-elurk-theme="dark"] .dv-tab, html[data-elurk-theme="dark"] .dv-tile .s,
+html[data-elurk-theme="dark"] .dv-table th, html[data-elurk-theme="dark"] .dv-actions a, html[data-elurk-theme="dark"] .dv-empty { color:#9AA5B1; }
+html[data-elurk-theme="dark"] .dv-tabs { border-bottom-color:#3A434C; }
+html[data-elurk-theme="dark"] .dv-tab:hover, html[data-elurk-theme="dark"] .dv-tab.active { color:#7FB6EA; } html[data-elurk-theme="dark"] .dv-tab.active { border-bottom-color:#7FB6EA; }
+html[data-elurk-theme="dark"] .dv-group h3 { color:#E4E8EC; }
+html[data-elurk-theme="dark"] .dv-tile, html[data-elurk-theme="dark"] .dv-table, html[data-elurk-theme="dark"] .dv-empty, html[data-elurk-theme="dark"] .dv-fm { background:#2A3138; border-color:#3A434C; color:#E4E8EC; }
+html[data-elurk-theme="dark"] .dv-tile:hover { border-color:#7FB6EA; box-shadow:0 2px 8px rgba(0,0,0,.35); }
+html[data-elurk-theme="dark"] .dv-table th { background:#242B32; } html[data-elurk-theme="dark"] .dv-table th, html[data-elurk-theme="dark"] .dv-table td { border-bottom-color:#3A434C; }
+html[data-elurk-theme="dark"] .dv-table td { color:#E4E8EC; }
+html[data-elurk-theme="dark"] .dv-table a.row-link, html[data-elurk-theme="dark"] .dv-actions a:hover, html[data-elurk-theme="dark"] .dv-empty a { color:#7FB6EA; }
+html[data-elurk-theme="dark"] .dv-btn.sec { background:#3A434C; color:#E4E8EC !important; }
+html[data-elurk-theme="dark"] .dv-badge.ok { background:#1B3329; color:#7ED6B0; } html[data-elurk-theme="dark"] .dv-badge.warn { background:#3A2F1A; color:#E8B860; }
 </style>
 
 <div class="dv-wrap">
@@ -357,14 +371,47 @@
                     ".table thead th{padding:6px 4px!important}",
                     ".table thead .checkbox .check,.table thead .b-checkbox .check{border-color:#FFFFFF!important}"
                 ].join("");
+                // Variante OSCURA del gestor (se anade tras las reglas claras cuando el
+                // panel esta en html[data-elurk-theme="dark"]; misma paleta que el panel).
+                var FM_DARK = [
+                    "html,body{background:#1F262C!important;color:#E4E8EC!important}",
+                    ".table.is-hoverable tbody tr:nth-child(odd){background:#2A3138!important}",
+                    ".table.is-hoverable tbody tr:nth-child(even){background:#252C33!important}",
+                    ".table.is-hoverable tbody tr:not(.is-selected):hover{background:#34404B!important}",
+                    ".table tr.is-selected,.is-selected{background:#2F4A66!important}",
+                    ".table,.b-table .table{border-color:#3A434C!important}",
+                    ".table td,.table tbody th,.is-selected td{color:#E4E8EC!important;border-color:#3A434C!important}",
+                    ".file-row.type-file a.name:not([data-v])::before{color:#9AA5B1!important}",
+                    ".breadcrumb a:not([data-v]){background:#2A3138!important;color:#7FB6EA!important;border-color:#3A434C!important}",
+                    ".breadcrumb a:not([data-v]):hover{background:#34404B!important;color:#9CC7F5!important}",
+                    ".breadcrumb li+li::before{color:#6B7A88!important}",
+                    ".box,.progress-box .box,.modal-card,.modal-card-body,.modal-card-head,.modal-card-foot,.dropdown-content{background:#2A3138!important;color:#E4E8EC!important}",
+                    "body,p,span,li,td,th,label,.label,.title,.subtitle,.help,.table,.file-row a,.file-row a.name,.breadcrumb li,.dropdown-item,.dropdown-content,.tree-list,.tree-list a,.pagination-link,.modal-card,.box,.card,.card-content,.level-item,.column{color:#E4E8EC!important}",
+                    ".input,.textarea,.select select{background:#1F262C!important;color:#E4E8EC!important;border-color:#3A434C!important}",
+                    ".input::placeholder,.textarea::placeholder{color:#7C8792!important}",
+                    ".button:not(.is-primary),.button:not(.is-primary) *,.dropdown-trigger .button,.dropdown-trigger .button *{background:#3A434C!important;color:#E4E8EC!important;border-color:#46505A!important}",
+                    ".button:not(.is-primary):hover{background:#46505A!important;color:#FFFFFF!important}",
+                    ".tree-list a:not([data-v]):hover{background:#34404B!important}",
+                    "a,.has-text-primary{color:#7FB6EA!important}",
+                    "#multi-actions a.dropdown-item:not([data-v]),#multi-actions a.dropdown-item:not([data-v]) *,#multi-actions .dropdown-menu a:not([data-v]),#multi-actions .dropdown-menu a:not([data-v]) *,#multi-actions a:not([data-v]) .dropdown-item,#multi-actions .dropdown-content{background:#2A3138!important;color:#E4E8EC!important}",
+                    "#multi-actions a.dropdown-item:not([data-v]):hover,#multi-actions a.dropdown-item:not([data-v]):hover *,#multi-actions .dropdown-menu a:not([data-v]):hover,#multi-actions .dropdown-menu a:not([data-v]):hover *,#multi-actions a:not([data-v]) .dropdown-item:hover{background:#34404B!important;color:#9CC7F5!important}",
+                    /* La cabecera azul y los botones de accion azules son iguales en ambos modos */
+                    ".table thead,.table thead tr,.table thead th,.b-table .table thead th,.table thead th *,.table thead .th-wrap,.table thead .th-wrap *{background:#1A73B8!important;color:#FFFFFF!important;border-color:#1A73B8!important}"
+                ].join("");
+                function panelIsDark() { return document.documentElement.getAttribute("data-elurk-theme") === "dark"; }
                 function injectFmStyle() {
                     try {
                         var d = fm.contentDocument;
-                        if (!d || !d.head || d.getElementById("elurk-fm-embed")) { return; }
-                        var st = d.createElement("style"); st.id = "elurk-fm-embed"; st.textContent = FM_CSS;
+                        if (!d || !d.head) { return; }
+                        var css = FM_CSS + (panelIsDark() ? FM_DARK : "");
+                        var st = d.getElementById("elurk-fm-embed");
+                        if (st) { if (st.textContent !== css) { st.textContent = css; } return; }
+                        st = d.createElement("style"); st.id = "elurk-fm-embed"; st.textContent = css;
                         d.head.appendChild(st);
                     } catch (e) {}
                 }
+                // Al pulsar el boton claro/oscuro del panel, el gestor cambia a la vez.
+                document.addEventListener("elurk:theme", injectFmStyle);
                 var firstLoad = true;
                 // Listener PERSISTENTE: en cada carga del iframe comprobamos que sigue
                 // siendo el gestor (/fm/). Si navega a otra pagina del panel (salir,

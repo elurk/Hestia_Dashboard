@@ -1504,3 +1504,99 @@ header.app-header, .top-bar, .top-bar-inner, .container.top-bar-inner {
 }
 .main-menu-item-label { padding: 0 !important; margin: 0 !important; font-size: .88rem !important; line-height: 1.25 !important; width: 100% !important; }
 .main-menu-item-label i, .main-menu-item-label .fas, .main-menu-item-label .fab { font-size: .95rem !important; width: 1.15rem !important; }
+
+/* ==========================================================================
+   LOGO EN LA CABECERA DEL SIDEBAR (como Plesk): ocupa los 60px que antes
+   quedaban vacios bajo la barra blanca. El logo de Hestia (logo-header.svg)
+   es blanco, asi que se ve sobre el slate. El header ya no lleva logo.
+   ========================================================================== */
+.main-menu { padding-top: 0 !important; }
+/* (padding con !important: la regla ".main-menu > div { padding:0 }" de arriba lo anularia) */
+.main-menu-brand {
+  height: 60px !important; display: flex !important; align-items: center !important; padding: 0 1.1rem !important;
+  border-bottom: 1px solid rgba(255, 255, 255, .08) !important;
+}
+.main-menu-brand a { display: inline-flex; align-items: center; line-height: 0; }
+.main-menu-brand img { height: 28px; width: auto; }
+.top-bar-logo { display: none !important; }
+@media (max-width: 900px) { .main-menu-brand { height: 48px; } }
+
+/* Boton claro/oscuro de la barra superior: mismo aspecto que el resto de iconos */
+#elurk-theme-toggle { background: transparent !important; border: none !important; cursor: pointer; }
+
+/* ==========================================================================
+   MODO OSCURO (html[data-elurk-theme="dark"]) — paleta tipo Plesk Obsidian
+   oscuro: pagina #1F262C, superficies #2A3138, sidebar #1B2127, bordes
+   #3A434C, texto #E4E8EC, texto atenuado #9AA5B1. El azul de accion se
+   mantiene. Se cambia en directo con el boton de la barra superior.
+   1) Variables del tema base (maxtheme): cubren tablas, cajas, formularios,
+      avisos y menus nativos de Hestia.
+   ========================================================================== */
+html[data-elurk-theme="dark"] {
+  --color-secondary: #E4E8EC;
+  --color-light-primary: #2A3138;
+  --color-light-secondary: #1F262C;
+  --color-light-tertiary: #3A434C;
+  --color-light-quaternary: #9AA5B1;
+  --color-light-quinary: #343D46;
+  --color-light-senary: #3A434C;
+  --color-shadow: #00000040;
+  --color-shadow-menu: #00000040;
+  --color-shadow-notify: #00000066;
+  --text-tertiary: #FFFFFF;
+  --info-color: #9CC7F5;   --info-bg: #1E2F42;   --info-border: #2F5B8A;
+  --success-color: #7ED6B0; --success-bg: #1B3329; --success-border: #2C6B50;
+  --danger-color: #F3A3A3;  --danger-bg: #3A2224;  --danger-border: #7A3A3E;
+  --btn-modal-bg: #343D46; --btn-modal-border: #3A434C; --btn-modal-hover: #3E4852; --btn-modal-focus: #3E4852;
+  color-scheme: dark;
+}
+html[data-elurk-theme="dark"] body,
+html[data-elurk-theme="dark"] .app-content { background: #1F262C !important; color: #E4E8EC !important; }
+
+/* 2) Mis bloques con colores fijos: header, botones, formularios, contenedores */
+html[data-elurk-theme="dark"] header.app-header,
+html[data-elurk-theme="dark"] .top-bar,
+html[data-elurk-theme="dark"] .top-bar-inner,
+html[data-elurk-theme="dark"] .container.top-bar-inner { background: #2A3138 !important; box-shadow: 0 1px 0 #3A434C !important; }
+html[data-elurk-theme="dark"] .top-bar, html[data-elurk-theme="dark"] .top-bar *,
+html[data-elurk-theme="dark"] .top-bar-usage-item, html[data-elurk-theme="dark"] .top-bar-usage-item *,
+html[data-elurk-theme="dark"] .top-bar-menu-link, html[data-elurk-theme="dark"] .top-bar-menu-link i { color: #E4E8EC !important; }
+html[data-elurk-theme="dark"] .top-bar-menu-link:hover,
+html[data-elurk-theme="dark"] .top-bar-menu-link.active { background: #34404B !important; color: #9CC7F5 !important; }
+html[data-elurk-theme="dark"] .top-bar-notifications-panel,
+html[data-elurk-theme="dark"] .top-bar-menu-panel { background: #2A3138 !important; border-color: #3A434C !important; }
+
+html[data-elurk-theme="dark"] .main-menu { background: #1B2127 !important; }
+html[data-elurk-theme="dark"] .main-menu-item-link:hover { background: rgba(120, 180, 240, .18) !important; }
+
+html[data-elurk-theme="dark"] .button.button-secondary, html[data-elurk-theme="dark"] .button.button-back,
+html[data-elurk-theme="dark"] .button.button-secondary *, html[data-elurk-theme="dark"] .button.button-back * {
+  background: #3A434C !important; border-color: #46505A !important; color: #E4E8EC !important;
+}
+html[data-elurk-theme="dark"] .button.button-secondary:hover, html[data-elurk-theme="dark"] .button.button-back:hover { background: #46505A !important; }
+
+html[data-elurk-theme="dark"] .form-control, html[data-elurk-theme="dark"] .form-select, html[data-elurk-theme="dark"] textarea,
+html[data-elurk-theme="dark"] input[type="text"], html[data-elurk-theme="dark"] input[type="password"],
+html[data-elurk-theme="dark"] input[type="email"], html[data-elurk-theme="dark"] input[type="number"], html[data-elurk-theme="dark"] select {
+  background: #1F262C !important; color: #E4E8EC !important; border-color: #3A434C !important;
+}
+html[data-elurk-theme="dark"] .form-control::placeholder, html[data-elurk-theme="dark"] textarea::placeholder { color: #7C8792 !important; }
+html[data-elurk-theme="dark"] .u-mb10 .form-label, html[data-elurk-theme="dark"] .u-mb20 .form-label,
+html[data-elurk-theme="dark"] .form-label, html[data-elurk-theme="dark"] label { color: #9AA5B1 !important; }
+
+html[data-elurk-theme="dark"] .box, html[data-elurk-theme="dark"] .card, html[data-elurk-theme="dark"] .units-table,
+html[data-elurk-theme="dark"] .units-table-row, html[data-elurk-theme="dark"] .toolbar, html[data-elurk-theme="dark"] .toolbar-inner,
+html[data-elurk-theme="dark"] .modal, html[data-elurk-theme="dark"] .modal-content, html[data-elurk-theme="dark"] .dropdown-menu {
+  background-color: var(--bg-primary); color: #E4E8EC;
+}
+html[data-elurk-theme="dark"] .toolbar, html[data-elurk-theme="dark"] .toolbar-inner { background: transparent !important; }
+html[data-elurk-theme="dark"] .units-table-row:hover { background-color: #343D46 !important; }
+html[data-elurk-theme="dark"] h1, html[data-elurk-theme="dark"] h2, html[data-elurk-theme="dark"] h3,
+html[data-elurk-theme="dark"] h4, html[data-elurk-theme="dark"] .units-table-heading, html[data-elurk-theme="dark"] .form-title { color: #E4E8EC; }
+html[data-elurk-theme="dark"] a { color: #7FB6EA; }
+html[data-elurk-theme="dark"] a:hover { color: #9CC7F5; }
+/* Breadcrumb global (panel.php lo pinta con estilos inline: hace falta !important) */
+html[data-elurk-theme="dark"] .dv-crumbs { color: #9AA5B1 !important; }
+html[data-elurk-theme="dark"] .dv-crumbs a { color: #7FB6EA !important; }
+html[data-elurk-theme="dark"] .dv-crumbs span { color: #E4E8EC !important; }
+html[data-elurk-theme="dark"] hr { border-color: #3A434C; }

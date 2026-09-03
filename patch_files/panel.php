@@ -11,6 +11,16 @@
 		}
 	} catch (e) {}
 })();
+// Modo claro/oscuro (Dashboard Manager, fork Elurk): se aplica ANTES de pintar
+// para evitar el destello blanco. Eleccion guardada en localStorage ("elurkTheme");
+// por defecto claro. El CSS del tema Elurk reacciona a html[data-elurk-theme="dark"].
+(function () {
+	try {
+		if (localStorage.getItem("elurkTheme") === "dark") {
+			document.documentElement.setAttribute("data-elurk-theme", "dark");
+		}
+	} catch (e) {}
+})();
 </script>
 
 <header class="app-header">
@@ -21,10 +31,7 @@
 			<!-- Logo / Usage Statistics wrapper -->
 			<div class="top-bar-left">
 
-				<!-- Logo / Home Button -->
-				<a href="/" class="top-bar-logo" title="<?= htmlentities($_SESSION["APP_NAME"]) ?>">
-					<img src="/images/logo-header.svg" alt="<?= htmlentities($_SESSION["APP_NAME"]) ?>" width="54" height="29">
-				</a>
+				<!-- Logo / Home Button: movido a la cabecera del SIDEBAR (fork Elurk), como en Plesk -->
 
 				<!-- Usage Statistics -->
 				<div class="top-bar-usage">
@@ -181,6 +188,14 @@
 					<div x-cloak x-show="open" x-on:click.outside="open = false" class="top-bar-menu-panel">
 						<ul class="top-bar-menu-list">
 
+							<!-- Modo claro/oscuro en directo (fork Elurk, como en Plesk) -->
+							<li class="top-bar-menu-item">
+								<button type="button" id="elurk-theme-toggle" class="top-bar-menu-link" title="Cambiar a modo oscuro" aria-label="Cambiar modo claro/oscuro">
+									<i class="fas fa-moon"></i>
+									<span class="top-bar-menu-link-label u-hide-desktop">Modo claro/oscuro</span>
+								</button>
+							</li>
+
 							<!-- File Manager -->
 							<?php if (isset($_SESSION["FILE_MANAGER"]) && !empty($_SESSION["FILE_MANAGER"]) && $_SESSION["FILE_MANAGER"] == "true") { ?>
 								<?php if ($_SESSION["userContext"] === "admin" && $_SESSION["look"] === "admin" && $_SESSION["POLICY_SYSTEM_PROTECTED_ADMIN"] == "yes") { ?>
@@ -295,6 +310,12 @@
 	</div>
 
 	<nav x-data="{ open: false }" class="main-menu">
+		<!-- Logo del panel en la cabecera del sidebar (fork Elurk, estilo Plesk) -->
+		<div class="main-menu-brand">
+			<a href="/list/domain/" title="<?= htmlentities($_SESSION["APP_NAME"]) ?>">
+				<img src="/images/logo-header.svg" alt="<?= htmlentities($_SESSION["APP_NAME"]) ?>" width="54" height="29">
+			</a>
+		</div>
 		<div class="container">
 			<button x-on:click="open = !open" type="button" class="main-menu-toggle">
 				<i class="fas fa-bars"></i>
@@ -590,6 +611,29 @@ document.addEventListener("DOMContentLoaded", function () {
 		a.setAttribute("title", "Volver a " + dom);
 		// Por si Hestia enganchase history.back() al boton: forzamos nuestro destino.
 		a.addEventListener("click", function (e) { e.preventDefault(); e.stopImmediatePropagation(); location.href = target; }, true);
+	});
+});
+
+// Boton modo claro/oscuro: alterna html[data-elurk-theme], lo guarda en localStorage
+// y avisa a la pagina (evento "elurk:theme") por si tiene que re-tematizar algo
+// embebido (p.ej. el gestor de archivos dentro de la vista de dominio).
+document.addEventListener("DOMContentLoaded", function () {
+	var btn = document.getElementById("elurk-theme-toggle");
+	if (!btn) { return; }
+	var root = document.documentElement;
+	function isDark() { return root.getAttribute("data-elurk-theme") === "dark"; }
+	function paint() {
+		var d = isDark(), i = btn.querySelector("i");
+		if (i) { i.className = d ? "fas fa-sun" : "fas fa-moon"; }
+		btn.title = d ? "Cambiar a modo claro" : "Cambiar a modo oscuro";
+	}
+	paint();
+	btn.addEventListener("click", function () {
+		var toDark = !isDark();
+		if (toDark) { root.setAttribute("data-elurk-theme", "dark"); } else { root.removeAttribute("data-elurk-theme"); }
+		try { localStorage.setItem("elurkTheme", toDark ? "dark" : "light"); } catch (e) {}
+		paint();
+		try { document.dispatchEvent(new CustomEvent("elurk:theme", { detail: { dark: toDark } })); } catch (e) {}
 	});
 });
 </script>
