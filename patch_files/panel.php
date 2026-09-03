@@ -553,3 +553,43 @@ if (!$__isDashboard) {
 	echo '</nav>';
 }
 ?>
+<script>
+// Boton "Atras" nativo de Hestia -> volver al DOMINIO/pestana de origen en vez de a
+// la lista original (/list/dns/, /list/mail/...). El contexto viene en from=&tab=;
+// como Hestia redirige tras guardar perdiendo esos parametros, se recuerda unos
+// minutos en sessionStorage y se reutiliza en las paginas de dns/web/mail/db.
+document.addEventListener("DOMContentLoaded", function () {
+	var q = new URLSearchParams(location.search), p = location.pathname;
+	if (/^\/list\/domain\//.test(p)) { return; }
+	var re = /^[a-z0-9.-]{1,253}$/i;
+	var dom = q.get("from") || q.get("domain") || "";
+	if (!re.test(dom)) { dom = ""; }
+	var tab = q.get("tab") || "";
+	var tabs = { info: 1, hosting: 1, mail: 1, files: 1, db: 1, wp: 1 };
+	function tabFromPath() {
+		if (/\/(dns|web)\//.test(p)) { return "hosting"; }
+		if (/\/mail\//.test(p)) { return "mail"; }
+		if (/\/db\//.test(p)) { return "db"; }
+		return "info";
+	}
+	if (!tabs[tab]) { tab = tabFromPath(); }
+	try {
+		if (dom) {
+			sessionStorage.setItem("elurkDomCtx", JSON.stringify({ d: dom, t: tab, ts: Date.now() }));
+		} else {
+			var c = JSON.parse(sessionStorage.getItem("elurkDomCtx") || "null");
+			if (c && re.test(c.d || "") && Date.now() - c.ts < 600000 && /^\/(list|edit|add)\/(dns|web|mail|db)\//.test(p)) {
+				dom = c.d; tab = tabFromPath();
+			}
+		}
+	} catch (e) {}
+	if (!dom) { return; }
+	var target = "/list/domain/?domain=" + encodeURIComponent(dom) + "#" + tab;
+	document.querySelectorAll("a.button-back, a.js-button-back, .button-back").forEach(function (a) {
+		if (a.tagName === "A") { a.setAttribute("href", target); }
+		a.setAttribute("title", "Volver a " + dom);
+		// Por si Hestia enganchase history.back() al boton: forzamos nuestro destino.
+		a.addEventListener("click", function (e) { e.preventDefault(); e.stopImmediatePropagation(); location.href = target; }, true);
+	});
+});
+</script>
