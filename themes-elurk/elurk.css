@@ -1427,3 +1427,13 @@ a:hover { color: var(--elurk-petrol-h); }
 .u-mb10 .form-control, .u-mb20 .form-control, .u-mb10 .form-select, .u-mb20 .form-select {
   padding: .55rem .75rem !important; height: auto !important; line-height: 1.3 !important;
 }
+
+/* ==========================================================================
+   OPCIONES AVANZADAS SIEMPRE DESPLEGADAS (editar/anadir web, correo, DNS, BD...)
+   Hestia las pliega con Alpine: <div x-show="showAdvanced"> (inline display:none).
+   Un !important en hoja de estilos gana al inline, asi que quedan siempre a la
+   vista (p.ej. el selector de version PHP #v_backend_template). Se oculta el
+   boton de plegar/desplegar porque ya no tendria efecto.
+   ========================================================================== */
+[x-show="showAdvanced"] { display: block !important; }
+button[x-on\:click*="showAdvanced"], button[\@click*="showAdvanced"] { display: none !important; }
