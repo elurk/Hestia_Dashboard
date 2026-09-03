@@ -60,3 +60,23 @@ body, p, span, li, td, th, label, .label, .title, .subtitle, .help, .table, .fil
 }
 .table thead th { padding: 6px 4px !important; }
 .table thead .checkbox .check, .table thead .b-checkbox .check { border-color: #FFFFFF !important; }
+/* EDITOR DE CODIGO (vue-prism-editor) en CLARO: Hestia lo pone oscuro sin
+   condicion de tema (#161616 + texto gris). Fondo blanco, numeros de linea
+   atenuados y colores de sintaxis del tema claro por defecto de Prism. */
+:not(pre) > code[class*="language-"], pre[class*="language-"], .prism-editor__container, .prism-editor__editor, .prism-editor-wrapper {
+  background: #FFFFFF !important; color: #212529 !important; text-shadow: none !important;
+}
+code[class*="language-"], pre[class*="language-"], .prism-editor__editor, .prism-editor__editor * { color: #212529 !important; text-shadow: none !important; }
+.prism-editor-wrapper { border: 1px solid #CFD8E0 !important; border-radius: 6px !important; }
+.prism-editor__line-numbers { background: #F4F6F8 !important; color: #8A96A3 !important; border-right: 1px solid #E1E6EA !important; }
+.prism-editor__line-number { color: #8A96A3 !important; }
+.prism-editor__textarea { caret-color: #212529 !important; }
+code[class*="language-"]::selection, code[class*="language-"] ::selection, pre[class*="language-"]::selection, pre[class*="language-"] ::selection { background: #D6E7F5 !important; }
+.token.comment, .token.prolog, .token.doctype, .token.cdata { color: #708090 !important; }
+.token.punctuation { color: #6B7A88 !important; }
+.token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol, .token.deleted { color: #990055 !important; }
+.token.selector, .token.attr-name, .token.string, .token.char, .token.builtin, .token.inserted { color: #669900 !important; }
+.token.operator, .token.entity, .token.url { color: #9A6E3A !important; }
+.token.atrule, .token.attr-value, .token.keyword { color: #0077AA !important; }
+.token.function, .token.class-name { color: #DD4A68 !important; }
+.token.regex, .token.important, .token.variable { color: #EE9900 !important; }

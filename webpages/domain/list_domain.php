@@ -369,7 +369,23 @@ html[data-elurk-theme="dark"] .dv-badge.ok { background:#1B3329; color:#7ED6B0; 
                     /* Cabecera de la tabla AZUL con texto blanco (salia negra con texto negro) */
                     ".table thead,.table thead tr,.table thead th,.b-table .table thead th,.table thead th *,.table thead .th-wrap,.table thead .th-wrap *,.table thead .icon,.table thead svg{background:#1A73B8!important;color:#FFFFFF!important;border-color:#1A73B8!important;fill:#FFFFFF!important}",
                     ".table thead th{padding:6px 4px!important}",
-                    ".table thead .checkbox .check,.table thead .b-checkbox .check{border-color:#FFFFFF!important}"
+                    ".table thead .checkbox .check,.table thead .b-checkbox .check{border-color:#FFFFFF!important}",
+                    /* Editor de codigo (vue-prism-editor) en CLARO: Hestia lo forzaba a oscuro sin condicion */
+                    ":not(pre)>code[class*=\"language-\"],pre[class*=\"language-\"],.prism-editor__container,.prism-editor__editor,.prism-editor-wrapper{background:#FFFFFF!important;color:#212529!important;text-shadow:none!important}",
+                    "code[class*=\"language-\"],pre[class*=\"language-\"],.prism-editor__editor,.prism-editor__editor *{color:#212529!important;text-shadow:none!important}",
+                    ".prism-editor-wrapper{border:1px solid #CFD8E0!important;border-radius:6px!important}",
+                    ".prism-editor__line-numbers{background:#F4F6F8!important;color:#8A96A3!important;border-right:1px solid #E1E6EA!important}",
+                    ".prism-editor__line-number{color:#8A96A3!important}",
+                    ".prism-editor__textarea{caret-color:#212529!important}",
+                    "code[class*=\"language-\"]::selection,code[class*=\"language-\"] ::selection,pre[class*=\"language-\"]::selection,pre[class*=\"language-\"] ::selection{background:#D6E7F5!important}",
+                    ".token.comment,.token.prolog,.token.doctype,.token.cdata{color:#708090!important}",
+                    ".token.punctuation{color:#6B7A88!important}",
+                    ".token.property,.token.tag,.token.boolean,.token.number,.token.constant,.token.symbol,.token.deleted{color:#990055!important}",
+                    ".token.selector,.token.attr-name,.token.string,.token.char,.token.builtin,.token.inserted{color:#669900!important}",
+                    ".token.operator,.token.entity,.token.url{color:#9A6E3A!important}",
+                    ".token.atrule,.token.attr-value,.token.keyword{color:#0077AA!important}",
+                    ".token.function,.token.class-name{color:#DD4A68!important}",
+                    ".token.regex,.token.important,.token.variable{color:#EE9900!important}"
                 ].join("");
                 // Variante OSCURA del gestor (se anade tras las reglas claras cuando el
                 // panel esta en html[data-elurk-theme="dark"]; misma paleta que el panel).
@@ -396,7 +412,23 @@ html[data-elurk-theme="dark"] .dv-badge.ok { background:#1B3329; color:#7ED6B0; 
                     "#multi-actions a.dropdown-item:not([data-v]),#multi-actions a.dropdown-item:not([data-v]) *,#multi-actions .dropdown-menu a:not([data-v]),#multi-actions .dropdown-menu a:not([data-v]) *,#multi-actions a:not([data-v]) .dropdown-item,#multi-actions .dropdown-content{background:#2A3138!important;color:#E4E8EC!important}",
                     "#multi-actions a.dropdown-item:not([data-v]):hover,#multi-actions a.dropdown-item:not([data-v]):hover *,#multi-actions .dropdown-menu a:not([data-v]):hover,#multi-actions .dropdown-menu a:not([data-v]):hover *,#multi-actions a:not([data-v]) .dropdown-item:hover{background:#34404B!important;color:#9CC7F5!important}",
                     /* La cabecera azul y los botones de accion azules son iguales en ambos modos */
-                    ".table thead,.table thead tr,.table thead th,.b-table .table thead th,.table thead th *,.table thead .th-wrap,.table thead .th-wrap *{background:#1A73B8!important;color:#FFFFFF!important;border-color:#1A73B8!important}"
+                    ".table thead,.table thead tr,.table thead th,.b-table .table thead th,.table thead th *,.table thead .th-wrap,.table thead .th-wrap *{background:#1A73B8!important;color:#FFFFFF!important;border-color:#1A73B8!important}",
+                    /* Editor de codigo en OSCURO (mismo gris del panel) con sintaxis coloreada */
+                    ":not(pre)>code[class*=\"language-\"],pre[class*=\"language-\"],.prism-editor__container,.prism-editor__editor,.prism-editor-wrapper{background:#1F262C!important;color:#E4E8EC!important}",
+                    "code[class*=\"language-\"],pre[class*=\"language-\"],.prism-editor__editor,.prism-editor__editor *{color:#E4E8EC!important}",
+                    ".prism-editor-wrapper{border-color:#3A434C!important}",
+                    ".prism-editor__line-numbers{background:#2A3138!important;color:#7C8792!important;border-right-color:#3A434C!important}",
+                    ".prism-editor__line-number{color:#7C8792!important}",
+                    ".prism-editor__textarea{caret-color:#E4E8EC!important}",
+                    "code[class*=\"language-\"]::selection,code[class*=\"language-\"] ::selection,pre[class*=\"language-\"]::selection,pre[class*=\"language-\"] ::selection{background:#2F4A66!important}",
+                    ".token.comment,.token.prolog,.token.doctype,.token.cdata{color:#8292A2!important}",
+                    ".token.punctuation{color:#C8D0D8!important}",
+                    ".token.property,.token.tag,.token.boolean,.token.number,.token.constant,.token.symbol,.token.deleted{color:#F78FB3!important}",
+                    ".token.selector,.token.attr-name,.token.string,.token.char,.token.builtin,.token.inserted{color:#A6E22E!important}",
+                    ".token.operator,.token.entity,.token.url{color:#E6B455!important}",
+                    ".token.atrule,.token.attr-value,.token.keyword{color:#66D9EF!important}",
+                    ".token.function,.token.class-name{color:#E6DB74!important}",
+                    ".token.regex,.token.important,.token.variable{color:#FD971F!important}"
                 ].join("");
                 function panelIsDark() { return document.documentElement.getAttribute("data-elurk-theme") === "dark"; }
                 function injectFmStyle() {
