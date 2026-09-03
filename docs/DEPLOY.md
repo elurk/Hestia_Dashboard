@@ -26,6 +26,30 @@ sudo bash install.sh
 
 Esto instala: dashboard con menú lateral, los 4 temas, **fuentes autoalojadas**
 (sin Google), el CLI `hestia-theme`, la **protección anti-updates** y el resto.
+También deja el **tema Elurk** en `css/themes/custom/elurk.css`, la **vista por
+dominio** (`/list/domain/`), las pestañas Seguridad/WordPress, el sidebar con
+el logo, el botón claro/oscuro y el gestor de archivos en claro.
+
+Para actualizar un servidor que ya tiene el fork basta con repetir estos dos
+pasos (`git pull` + `sudo bash install.sh`) y recargar con Ctrl+Shift+R.
+
+## 2b. Activar el tema Elurk
+
+El CSS ya está copiado, pero Hestia carga el tema que tenga cada usuario en su
+configuración. Para el usuario admin (en el lab, `elurk`):
+
+```bash
+sudo bash themes-elurk/deploy-elurk-theme.sh <usuario_admin>
+```
+
+Equivale a elegir "elurk" en el panel: icono de usuario → Editar → Tema.
+Para que sea el tema por defecto de **todos** los usuarios nuevos, en el panel:
+Ajustes del servidor (engranaje) → Apariencia → Tema → `elurk`. Un usuario que
+tenga su propio tema elegido conserva el suyo.
+
+Comprobación: el sidebar oscuro con el logo arriba, y la entrada "Dominios"
+llevando a la vista por dominio. Si ves el menú horizontal de Hestia, el tema
+no está activo para ese usuario.
 
 ## 3. Activar el dashboard alternativo
 
