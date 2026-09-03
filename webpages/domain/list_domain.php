@@ -69,9 +69,14 @@
     // Hestia: from=<dominio>&tab=<pestana>. Asi "Editar buzon" sabe volver a
     // dominio.com > Correo.
     $back = fn(string $tab) => "&from=$u&tab=$tab";
-    // Gestor de archivos posicionado en el docroot (deep-link por hash; se
-    // ajusta segun el formato de URL real del FM de Hestia).
-    $fmUrl = "/fm/#" . $docroot;
+    // Gestor de archivos (FileGator, router hash): el directorio va en ?cd= y es
+    // RELATIVO al home del usuario conectado (su raiz). Al cargar ignora cd, asi
+    // que el JS cambia el hash tras la carga para disparar su watcher de ruta.
+    $fmCd  = preg_replace('#^/home/' . preg_quote($owner, '#') . '#', '', $docroot); // -> /web/dominio/public_html
+    $fmUrl = "/fm/#/?cd=" . rawurlencode($fmCd);
+    // El FM solo muestra los archivos del usuario CONECTADO: si un admin mira el
+    // dominio de otro usuario, no podra ver sus archivos desde aqui.
+    $fmForeign = ($owner !== $user);
     $editWebInfo = "/edit/web/?domain=$u" . $back("info") . "&token=" . $h($tok);
     $editWebHost = "/edit/web/?domain=$u" . $back("hosting") . "&token=" . $h($tok);
     $isSSL = (($web["SSL"] ?? "no") === "yes");
@@ -181,18 +186,39 @@
             <?php elseif (empty($mail)): ?>
                 <div class="dv-empty">Sin buzones todavía.</div>
             <?php else: ?>
+                <?php
+                // Webmail (Roundcube) integrado de Hestia: mismo host sin el puerto del
+                // panel, alias WEBMAIL_ALIAS (por defecto "webmail"). Roundcube acepta
+                // ?_user= para dejar la direccion ya rellenada en el login.
+                [$__wmHost] = explode(":", ($_SERVER["HTTP_HOST"] ?? "") . ":");
+                $webmailBase = "//" . $__wmHost . "/" . (!empty($_SESSION["WEBMAIL_ALIAS"]) ? $_SESSION["WEBMAIL_ALIAS"] : "webmail") . "/";
+                $fmtList = function ($v) use ($h): string {
+                    $v = trim((string) $v);
+                    if ($v === "" || $v === "no") { return '<span style="color:#B0BAC4">—</span>'; }
+                    return $h(str_replace(",", ", ", $v));
+                };
+                ?>
                 <table class="dv-table">
-                    <thead><tr><th>Dirección</th><th>Cuota</th><th>Usado</th><th>Reenvío</th><th>Estado</th><th></th></tr></thead>
+                    <thead><tr><th>Dirección</th><th>Alias</th><th>Reenvío a</th><th>Cuota</th><th>Usado</th><th>Estado</th><th></th></tr></thead>
                     <tbody>
                     <?php foreach ($mail as $acc => $m): ?>
-                        <?php $editAcc = "/edit/mail/?" . http_build_query(["domain" => $domain, "account" => $acc, "from" => $domain, "tab" => "mail", "token" => $tok]); ?>
+                        <?php
+                        $editAcc = "/edit/mail/?" . http_build_query(["domain" => $domain, "account" => $acc, "from" => $domain, "tab" => "mail", "token" => $tok]);
+                        $wmUrl   = $webmailBase . "?_user=" . rawurlencode($acc . "@" . $domain);
+                        $fwdOnly = (($m["FWD_ONLY"] ?? "no") === "yes");
+                        ?>
                         <tr>
-                            <td><a class="row-link" href="<?= $h($editAcc) ?>" title="Editar cuenta"><?= $h($acc) ?>@<?= $h($domain) ?></a></td>
+                            <td><a class="row-link" href="<?= $h($editAcc) ?>" title="Editar cuenta (alias, reenvío, autorespuesta, contraseña)"><?= $h($acc) ?>@<?= $h($domain) ?></a>
+                                <?php if (($m["AUTOREPLY"] ?? "no") === "yes"): ?> <i class="fas fa-reply" style="color:#6B7A88;font-size:.75rem" title="Autorespuesta activa"></i><?php endif; ?></td>
+                            <td style="font-size:.85rem"><?= $fmtList($m["ALIAS"] ?? "") ?></td>
+                            <td style="font-size:.85rem"><?= $fmtList($m["FWD"] ?? "") ?><?= $fwdOnly ? ' <span class="dv-badge warn" title="Solo reenvía, no guarda copia">solo reenvío</span>' : '' ?></td>
                             <td><?= ($m["QUOTA"] ?? "unlimited") === "unlimited" ? "∞" : $h($m["QUOTA"]) . " MB" ?></td>
                             <td><?= $h($m["U_DISK"] ?? 0) ?> MB</td>
-                            <td><?= $h($m["FWD"] ?? "—") ?></td>
                             <td><?= (($m["SUSPENDED"] ?? "no") === "yes") ? '<span class="dv-badge warn">Suspendido</span>' : '<span class="dv-badge ok">Activo</span>' ?></td>
-                            <td class="dv-actions" style="text-align:right;white-space:nowrap"><a href="<?= $h($editAcc) ?>" title="Editar"><i class="fas fa-pen"></i></a><a href="/webmail/" target="_blank" title="Webmail"><i class="fas fa-envelope-open"></i></a></td>
+                            <td class="dv-actions" style="text-align:right;white-space:nowrap">
+                                <a href="<?= $h($editAcc) ?>" title="Editar: alias, reenvío, autorespuesta, contraseña"><i class="fas fa-pen"></i> Editar</a>
+                                <a href="<?= $h($wmUrl) ?>" target="_blank" title="Abrir esta cuenta en el webmail"><i class="fas fa-envelope-open" style="color:#1A73B8"></i> Webmail</a>
+                            </td>
                         </tr>
                     <?php endforeach; ?>
                     </tbody>
@@ -208,7 +234,11 @@
                 <span class="dv-meta" style="font-weight:normal;font-family:monospace;font-size:.8rem"><?= $h($docroot) ?></span>
                 <a class="dv-btn sec" href="<?= $h($fmUrl) ?>" target="_blank"><i class="fas fa-arrow-up-right-from-square"></i> Abrir aparte</a>
             </h3>
-            <iframe class="dv-fm" id="dv-fm" data-src="<?= $h($fmUrl) ?>" title="Gestor de archivos"></iframe>
+            <?php if ($fmForeign): ?>
+                <div class="dv-empty" style="margin-bottom:.75rem"><i class="fas fa-circle-info"></i> El gestor de archivos muestra los archivos del usuario conectado (<b><?= $h($user) ?></b>), no los de <b><?= $h($owner) ?></b>. Para gestionar los archivos de este dominio, entra como su propietario desde <a href="/list/user/">Usuarios</a> ("iniciar sesión como").</div>
+            <?php endif; ?>
+            <!-- src base + hash con ?cd= aplicado tras la carga (dispara el watcher de ruta de FileGator) -->
+            <iframe class="dv-fm" id="dv-fm" data-base="/fm/#/" data-hash="#/?cd=<?= $h(rawurlencode($fmCd)) ?>" title="Gestor de archivos"></iframe>
         </div>
     </div>
 
@@ -270,7 +300,17 @@
             tabs.forEach(function (t) { t.classList.toggle("active", t.dataset.pane === name); });
             var pane = document.getElementById("pane-" + name);
             if (crumb && pane) { crumb.textContent = pane.dataset.title || name; }
-            if (name === "files" && fm && !fm.getAttribute("src")) { fm.setAttribute("src", fm.dataset.src); }
+            // Archivos: cargar el FM en su raiz y, una vez cargado, cambiar el hash a
+            // #/?cd=<ruta> para que FileGator (router hash) entre en el docroot.
+            if (name === "files" && fm && !fm.getAttribute("src")) {
+                fm.addEventListener("load", function onload() {
+                    fm.removeEventListener("load", onload);
+                    setTimeout(function () {
+                        try { fm.contentWindow.location.hash = fm.dataset.hash; } catch (e) {}
+                    }, 400);
+                });
+                fm.setAttribute("src", fm.dataset.base);
+            }
             try { history.replaceState(null, "", "#" + name); } catch (e) {}
         }
         tabs.forEach(function (t) { t.addEventListener("click", function (e) { e.preventDefault(); show(t.dataset.pane); }); });
