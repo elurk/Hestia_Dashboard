@@ -132,9 +132,13 @@ list)
     tarjson=$(v-list-user-backups "$u" json 2>/dev/null) || tarjson="{}"
     resticjson="[]"
     if restic_ready "$u"; then resticjson=$(v-list-user-backups-restic "$u" json 2>/dev/null) || resticjson="[]"; fi
-    python3 - "$u" "$BACKUP_DIR" "$INDEX_DIR" "$tarjson" "$resticjson" "${BACKUP_SYSTEM:-local}" << 'PYEOF'
+    # Retencion: Hestia conserva las ultimas BACKUPS copias del usuario (valor del paquete)
+    userjson=$(v-list-user "$u" json 2>/dev/null) || userjson="{}"
+    python3 - "$u" "$BACKUP_DIR" "$INDEX_DIR" "$tarjson" "$resticjson" "${BACKUP_SYSTEM:-local}" "$userjson" << 'PYEOF'
 import json, os, sys
-u, bdir, idir, tj, rj, bsys = sys.argv[1:7]
+u, bdir, idir, tj, rj, bsys, uj = sys.argv[1:8]
+try: uinfo = (json.loads(uj) or {}).get(u) or {}
+except Exception: uinfo = {}
 out = []
 try: tars = json.loads(tj) if tj.strip() else {}
 except Exception: tars = {}
@@ -154,7 +158,7 @@ for s in (snaps or []):
         "local": True, "type": "restic", "paths": s.get("paths") or []})
 out.sort(key=lambda b: (b["date"], b["time"]), reverse=True)
 print(json.dumps({"ok": True, "backups": out, "restic": bool(snaps is not None and os.path.isfile(f"/usr/local/hestia/data/users/{u}/restic.conf")),
-    "backup_system": bsys}, ensure_ascii=False))
+    "backup_system": bsys, "retention": uinfo.get("BACKUPS", ""), "package": uinfo.get("PACKAGE", "")}, ensure_ascii=False))
 PYEOF
     ;;
 

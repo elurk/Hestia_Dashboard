@@ -367,6 +367,7 @@ html[data-elurk-theme="dark"] .dv-toggle { border-bottom-color:#3A434C; } html[d
                 <div class="dv-log" id="bk-log"></div>
             </div>
             <div id="bk-msg"></div>
+            <p class="dv-meta" id="bk-retention" style="margin:.25rem 0 .6rem"></p>
             <div id="bk-list"><div class="dv-empty"><span class="dv-spin"></span> Cargando copias…</div></div>
         </div>
     </div>
@@ -595,6 +596,12 @@ html[data-elurk-theme="dark"] .dv-toggle { border-bottom-color:#3A434C; } html[d
                 if (!r.ok) { bkList.innerHTML = '<div class="dv-empty">No se pudieron leer las copias: ' + esc(r.error || "") + "</div>"; return; }
                 bkBackups = r.backups || [];
                 document.getElementById("bk-create-restic").hidden = !r.restic;
+                var ret = document.getElementById("bk-retention"), n = parseInt(r.retention, 10);
+                if (!isNaN(n)) {
+                    ret.innerHTML = "Retención: Hestia conserva las <b>" + n + "</b> última(s) copia(s) completa(s) de este usuario y borra las anteriores (paquete <b>" + esc(r.package || "") + "</b>)." +
+                        (n <= 1 ? ' <span style="color:#B4460F">Con 1, cada copia nueva sustituye a la anterior.</span>' : "") +
+                        (IS_ADMIN && r.package ? ' <a href="/edit/package/?package=' + encodeURIComponent(r.package) + '&token=' + encodeURIComponent(TOKEN) + '">Cambiar en el paquete</a>' : "");
+                }
                 if (!bkBackups.length) { bkList.innerHTML = '<div class="dv-empty">Este usuario no tiene copias todavía. Hestia las hace cada noche (según el paquete del usuario).</div>'; return; }
                 var html = '<table class="dv-table"><thead><tr><th>Fecha</th><th>Tipo</th><th>Tamaño</th><th>Contenido</th><th>Este dominio</th><th></th></tr></thead><tbody>';
                 bkBackups.forEach(function (b, i) {
