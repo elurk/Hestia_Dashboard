@@ -153,3 +153,57 @@ temas, fuentes, CLI, hook de APT y script de reapply. Deja el sistema como antes
 | Pestaña WordPress visual en el panel | ⏳ Requiere lab (el motor ya existe) |
 
 Las dos pendientes necesitan ver el panel renderizado; se rematan en el lab.
+
+
+---
+
+## Copias y WordPress Toolkit (pestañas de la vista por dominio)
+
+Ambas se instalan con `install.sh` (wrappers `v-elurk-backup`, `v-wp-manage`,
+`hestia-wp-toolkit` en `/usr/local/hestia/bin`, sudoers para `hestiaweb`, endpoint
+`/list/domain/action.php`). Requisitos en el servidor: `python3` (viene con Ubuntu),
+`zstd` (Hestia lo instala si BACKUP_MODE=zstd), `rsync`, `flock`.
+
+### Copias
+1. Comprueba que el usuario tiene copias: Usuario → Copias, o `v-list-user-backups USER`.
+2. Abre `/list/domain/?domain=X#backup`. Debe listar las copias y, en "Este dominio",
+   marcar web/correo/DNS si el dominio está dentro.
+3. Prueba de restauración parcial SIN riesgo: Restaurar → tipo "Cuentas de correo" →
+   elige un buzón → opción "carpeta RESTAURADO-fecha" → Restaurar. Sigue el progreso
+   en el recuadro; el registro completo está en `/var/log/hestia/elurk-restore.USER.log`.
+   En el webmail del buzón aparece la carpeta RESTAURADO-…
+4. "Archivos sueltos": la primera vez genera un índice del tar (lee todo el sitio
+   comprimido, minutos); se guarda en `/backup/.elurk-index/` y las siguientes son inmediatas.
+5. "Solo configuración" deja copia del .conf pisado en `/backup/.elurk-index/conf-bak/`.
+
+FTPS (Plesk lo trae; el FTP de Hestia es plano). Sin tocar código, con rclone:
+```bash
+apt install rclone
+rclone config create nasftps ftp host=nas.ejemplo.com user=copias pass="$(rclone obscure 'LaClave')" explicit_tls=true   # FTPES puerto 21
+# (implícito, puerto 990: tls=true port=990)
+rclone lsd nasftps:                                   # prueba
+v-add-backup-host rclone nasftps                      # Hestia solo mira que exista [nasftps] en /root/.config/rclone/rclone.conf
+grep BACKUP_SYSTEM /usr/local/hestia/conf/hestia.conf # debe incluir rclone
+```
+Incrementales (restic): activa "Incremental Backups" en el paquete del usuario y
+crea el repositorio con `v-add-backup-host-restic` (puede ser el mismo remoto rclone).
+**Guarda fuera del servidor** `/usr/local/hestia/data/users/USER/restic.conf` (clave).
+La pestaña Copias mezcla ambas: las incrementales salen como "Incremental (restic)" y
+permiten restaurar archivos y buzones sin índice previo.
+
+### WordPress Toolkit
+1. WP-CLI por usuario: `v-add-user-wp-cli USER` (o el botón "Instalar WP-CLI" que sale
+   en la pestaña si eres admin). Sin WP-CLI solo se ven núcleo y medidas de archivos.
+2. Abre `/list/domain/?domain=X#wp`. La primera comprobación tarda (WP-CLI + consulta
+   de vulnerabilidades por plugin a wpvulnerability.net; caché 24 h en
+   `/usr/local/hestia/data/elurk/wpt/vulns/`, estado 10 min en `.../cache/`).
+3. Medidas: marca y "Asegurar seleccionadas". Las de servidor escriben
+   `/home/USER/conf/web/DOMINIO/nginx.conf_elurkwpt` (+ `.ssl.`) y un bloque
+   `# BEGIN ELURK-WPT` en el `.htaccess` del docroot; se valida con `nginx -t` antes de
+   recargar y se retiran si falla. Las de wp-config llevan el comentario `// ELURK-WPT`.
+   Pingbacks/autores/mantenimiento usan el mu-plugin `wp-content/mu-plugins/elurk-wp-toolkit.php`.
+4. Herramientas: caché FastCGI solo con nginx+PHP-FPM (sin Apache). "Tomar el control
+   de wp-cron" crea una tarea cron de Hestia cada 5 min con el PHP del dominio.
+
+Si algo no responde: `sudo -u hestiaweb sudo /usr/local/hestia/bin/v-elurk-backup list USER`
+y `... v-wp-manage status USER DOMINIO --refresh` en la consola muestran el JSON o el error.

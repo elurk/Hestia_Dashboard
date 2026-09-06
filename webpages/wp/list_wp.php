@@ -3,8 +3,9 @@
 <div class="dashboard-container" style="padding:1.5rem;">
     <h1 style="margin-bottom:.25rem;">WordPress</h1>
     <p style="opacity:.75;margin-top:0;">
-        WordPress detectados en los sitios alojados. Endurece permisos y configuracion
-        con un clic (equivalente al WP Toolkit de Plesk).
+        WordPress detectados en los sitios alojados. Pulsa el dominio para abrir su
+        Toolkit completo (riesgo, componentes vulnerables, medidas de seguridad,
+        herramientas). Aqui, endurecimiento rapido con un clic.
     </p>
 
     <?php $sites = $wp["sites"] ?? []; ?>
@@ -31,7 +32,7 @@
                 <tbody>
                     <?php foreach ($sites as $s): ?>
                         <tr style="border-top:1px solid rgba(128,128,128,.2);">
-                            <td style="padding:.5rem;font-weight:bold;"><?= htmlspecialchars($s["domain"]) ?></td>
+                            <td style="padding:.5rem;font-weight:bold;"><a href="/list/domain/?domain=<?= urlencode($s["domain"]) ?>#wp" title="Abrir el WordPress Toolkit de este dominio" style="color:#1A73B8;text-decoration:none;"><?= htmlspecialchars($s["domain"]) ?></a></td>
                             <td style="padding:.5rem;"><?= htmlspecialchars($s["user"]) ?></td>
                             <td style="padding:.5rem;">
                                 <?php if (!empty($s["hardened"])): ?>

@@ -450,7 +450,7 @@ remove_admin_tabs() {
         fi
     done
 
-    for wrapper in v-fail2ban-action v-wp-manage hestia-wp-harden; do
+    for wrapper in v-fail2ban-action v-wp-manage hestia-wp-harden hestia-wp-toolkit v-elurk-backup; do
         if [ -f "$BIN_DIR/$wrapper" ]; then
             rm -f "$BIN_DIR/$wrapper"
             print_status "Removed backend wrapper: $wrapper"

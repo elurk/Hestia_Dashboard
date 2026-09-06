@@ -29,6 +29,50 @@
 .dv-btn { display:inline-block; padding:.45rem .9rem; border-radius:6px; background:#1A73B8; color:#fff !important; text-decoration:none; font-size:.85rem; font-weight:500; }
 .dv-btn.sec { background:#E9EEF2; color:#212529 !important; }
 .dv-fm { width:100%; height:calc(100vh - 280px); min-height:520px; border:1px solid #E1E6EA; border-radius:8px; background:#fff; }
+/* --- Copias y WP Toolkit --- */
+.dv-cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:.75rem; margin-bottom:1rem; }
+.dv-card { background:#fff; border:1px solid #E1E6EA; border-radius:8px; padding:.9rem 1rem; display:flex; flex-direction:column; gap:.4rem; min-height:120px; }
+.dv-card .h { display:flex; justify-content:space-between; align-items:center; font-weight:600; font-size:.95rem; }
+.dv-card .h i { color:#6B7A88; } .dv-card .big { font-size:2rem; font-weight:600; line-height:1; } .dv-card .big small { font-size:.9rem; color:#6B7A88; font-weight:400; }
+.dv-card .s { font-size:.8rem; color:#6B7A88; } .dv-card .f { margin-top:auto; display:flex; gap:.4rem; flex-wrap:wrap; align-items:center; }
+.dv-btn.sm { padding:.3rem .65rem; font-size:.8rem; } .dv-btn.danger { background:#C0392B; } .dv-btn[disabled] { opacity:.5; cursor:default; }
+button.dv-btn { border:0; cursor:pointer; font-family:inherit; }
+.dv-subtabs { display:flex; gap:1.2rem; border-bottom:1px solid #E1E6EA; margin:.25rem 0 1rem; }
+.dv-subtab { padding:.4rem 0; cursor:pointer; color:#6B7A88; border-bottom:2px solid transparent; margin-bottom:-1px; font-weight:500; font-size:.9rem; }
+.dv-subtab.active { color:#212529; border-bottom-color:#1A73B8; }
+.dv-risk { display:inline-block; min-width:110px; text-align:center; padding:.2rem .5rem; border-radius:4px; font-size:.72rem; font-weight:700; letter-spacing:.03em; background:#E9EEF2; color:#212529; }
+.dv-risk.r1 { background:#FDF1DC; color:#9A6700; } .dv-risk.r2 { background:#FCE3D3; color:#B4460F; } .dv-risk.r3 { background:#F8D7DA; color:#A32633; } .dv-risk.r0 { background:#E3F5EA; color:#1E7B45; }
+.dv-status { font-size:1rem; } .dv-status.ok { color:#1E7B45; } .dv-status.warn { color:#D9822B; } .dv-status.crit { color:#C0392B; } .dv-status.unknown { color:#B0BAC4; }
+.dv-vulns { margin:.35rem 0 0; padding-left:1rem; font-size:.8rem; color:#6B7A88; } .dv-vulns a { color:#1A73B8; }
+.dv-table td.act { text-align:right; white-space:nowrap; } .dv-table td.act a, .dv-table td.act button { color:#1A73B8; background:none; border:0; cursor:pointer; font:inherit; font-size:.85rem; margin-left:.8rem; text-decoration:none; }
+.dv-table td.act a:hover, .dv-table td.act button:hover { text-decoration:underline; }
+.dv-toggle { display:flex; align-items:center; gap:.7rem; padding:.55rem 0; border-bottom:1px solid #EEF1F4; font-size:.9rem; } .dv-toggle:last-child { border-bottom:0; }
+.dv-toggle .sw { width:38px; height:22px; border-radius:11px; background:#CFD8E0; position:relative; cursor:pointer; flex:0 0 38px; transition:background .15s; }
+.dv-toggle .sw::after { content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:#fff; transition:left .15s; }
+.dv-toggle .sw.on { background:#1A73B8; } .dv-toggle .sw.on::after { left:19px; } .dv-toggle .sw.off-dis { opacity:.4; cursor:default; }
+.dv-toggle .hint { color:#6B7A88; font-size:.8rem; }
+.dv-msg { padding:.6rem .85rem; border-radius:6px; font-size:.85rem; margin:.5rem 0; } .dv-msg.ok { background:#E3F5EA; color:#1E7B45; } .dv-msg.err { background:#F8D7DA; color:#A32633; } .dv-msg.info { background:#E8F1F9; color:#145C94; }
+.dv-log { font-family:monospace; font-size:.78rem; white-space:pre-wrap; background:#fff; border:1px solid #E1E6EA; border-radius:6px; padding:.6rem .8rem; max-height:280px; overflow:auto; }
+.dv-spin { display:inline-block; width:14px; height:14px; border:2px solid #CFD8E0; border-top-color:#1A73B8; border-radius:50%; animation:dvspin .8s linear infinite; vertical-align:middle; }
+@keyframes dvspin { to { transform:rotate(360deg); } }
+.dv-check { margin-right:.5rem; }
+/* Modal de restauracion (doble lista tipo Plesk) */
+.dv-modal-bg { position:fixed; inset:0; background:rgba(33,37,41,.45); z-index:1000; display:flex; align-items:flex-start; justify-content:center; padding:3vh 1rem; overflow:auto; }
+.dv-modal { background:#F4F6F8; border-radius:10px; width:min(1000px, 100%); box-shadow:0 12px 40px rgba(0,0,0,.25); }
+.dv-modal .mh { display:flex; align-items:center; justify-content:space-between; padding:1rem 1.25rem; border-bottom:1px solid #E1E6EA; background:#fff; border-radius:10px 10px 0 0; }
+.dv-modal .mh h2 { margin:0; font-size:1.25rem; font-weight:600; } .dv-modal .mh .x { cursor:pointer; font-size:1.3rem; color:#6B7A88; background:none; border:0; }
+.dv-modal .mb { padding:1rem 1.25rem; } .dv-modal .mf { padding:.9rem 1.25rem; border-top:1px solid #E1E6EA; display:flex; gap:.6rem; align-items:center; background:#fff; border-radius:0 0 10px 10px; }
+.dv-form-row { display:grid; grid-template-columns:200px 1fr; gap:.6rem 1rem; align-items:start; margin-bottom:.8rem; font-size:.9rem; } .dv-form-row > label:first-child { color:#6B7A88; padding-top:.2rem; }
+.dv-form-row select, .dv-form-row input[type=text], .dv-form-row input[type=search] { padding:.35rem .5rem; border:1px solid #CFD8E0; border-radius:5px; font:inherit; background:#fff; color:#212529; }
+.dv-dual { display:grid; grid-template-columns:1fr 110px 1fr; gap:.75rem; align-items:stretch; }
+.dv-dual .col h4 { margin:0 0 .4rem; font-size:.95rem; font-weight:600; } .dv-dual .col .tools { display:flex; gap:.4rem; align-items:center; margin-bottom:.4rem; } .dv-dual .col .tools input[type=search] { flex:1; }
+.dv-list { background:#fff; border:1px solid #CFD8E0; border-radius:6px; min-height:230px; max-height:320px; overflow:auto; }
+.dv-list .it { display:flex; align-items:center; gap:.5rem; padding:.45rem .7rem; border-bottom:1px solid #EEF1F4; cursor:pointer; font-size:.88rem; } .dv-list .it:hover { background:#E8F1F9; }
+.dv-list .it .nm { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; } .dv-list .it .sz { color:#6B7A88; font-size:.75rem; } .dv-list .it .op { color:#1A73B8; font-size:.8rem; }
+.dv-list .empty { padding:1rem; color:#6B7A88; font-size:.85rem; }
+.dv-dual .mid { display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:#6B7A88; font-size:.75rem; gap:.5rem; }
+.dv-crumb { font-family:monospace; font-size:.78rem; color:#6B7A88; margin-bottom:.35rem; word-break:break-all; } .dv-crumb a { color:#1A73B8; text-decoration:none; }
+.dv-radio label { display:block; margin:.15rem 0; }
 /* Modo oscuro (boton de la barra superior, html[data-elurk-theme="dark"]) */
 html[data-elurk-theme="dark"] .dv-head h1 { color:#E4E8EC; }
 html[data-elurk-theme="dark"] .dv-head .dv-meta, html[data-elurk-theme="dark"] .dv-tab, html[data-elurk-theme="dark"] .dv-tile .s,
@@ -43,6 +87,12 @@ html[data-elurk-theme="dark"] .dv-table td { color:#E4E8EC; }
 html[data-elurk-theme="dark"] .dv-table a.row-link, html[data-elurk-theme="dark"] .dv-actions a:hover, html[data-elurk-theme="dark"] .dv-empty a { color:#7FB6EA; }
 html[data-elurk-theme="dark"] .dv-btn.sec { background:#3A434C; color:#E4E8EC !important; }
 html[data-elurk-theme="dark"] .dv-badge.ok { background:#1B3329; color:#7ED6B0; } html[data-elurk-theme="dark"] .dv-badge.warn { background:#3A2F1A; color:#E8B860; }
+html[data-elurk-theme="dark"] .dv-card, html[data-elurk-theme="dark"] .dv-log, html[data-elurk-theme="dark"] .dv-list, html[data-elurk-theme="dark"] .dv-modal .mh, html[data-elurk-theme="dark"] .dv-modal .mf { background:#2A3138; border-color:#3A434C; color:#E4E8EC; }
+html[data-elurk-theme="dark"] .dv-modal { background:#1F262C; } html[data-elurk-theme="dark"] .dv-modal .mh h2, html[data-elurk-theme="dark"] .dv-subtab.active, html[data-elurk-theme="dark"] .dv-toggle, html[data-elurk-theme="dark"] .dv-form-row { color:#E4E8EC; }
+html[data-elurk-theme="dark"] .dv-form-row select, html[data-elurk-theme="dark"] .dv-form-row input { background:#1F262C; color:#E4E8EC; border-color:#3A434C; }
+html[data-elurk-theme="dark"] .dv-list .it { border-bottom-color:#3A434C; } html[data-elurk-theme="dark"] .dv-list .it:hover { background:#34404B; }
+html[data-elurk-theme="dark"] .dv-risk { background:#3A434C; color:#E4E8EC; } html[data-elurk-theme="dark"] .dv-subtabs { border-bottom-color:#3A434C; }
+html[data-elurk-theme="dark"] .dv-toggle { border-bottom-color:#3A434C; } html[data-elurk-theme="dark"] .dv-msg.info { background:#1F3346; color:#9CC7F5; }
 </style>
 
 <div class="dv-wrap">
@@ -130,6 +180,7 @@ html[data-elurk-theme="dark"] .dv-badge.ok { background:#1B3329; color:#7ED6B0; 
         <a class="dv-tab" data-pane="mail">Correo</a>
         <a class="dv-tab" data-pane="files">Archivos</a>
         <a class="dv-tab" data-pane="db">Bases de datos</a>
+        <a class="dv-tab" data-pane="backup">Copias</a>
         <a class="dv-tab" data-pane="wp">WordPress</a>
     </div>
 
@@ -141,7 +192,7 @@ html[data-elurk-theme="dark"] .dv-badge.ok { background:#1B3329; color:#7ED6B0; 
                 <a class="dv-tile" data-goto="files"><span class="ico" style="background:#2E9BD6"><i class="fas fa-folder-open"></i></span><span><div class="t">Archivos</div><div class="s">Gestor de archivos de este dominio</div></span></a>
                 <a class="dv-tile" data-goto="db"><span class="ico" style="background:#7B4FB3"><i class="fas fa-database"></i></span><span><div class="t">Bases de datos</div><div class="s"><?= count($dbs) ?> base(s) de datos</div></span></a>
                 <a class="dv-tile" href="<?= $editWebInfo ?>"><span class="ico" style="background:#4C9A2A"><i class="fas fa-right-left"></i></span><span><div class="t">FTP / conexión</div><div class="s">Usuario FTP y ruta</div></span></a>
-                <a class="dv-tile" href="/list/backup/?<?= ltrim($back("info"), "&") ?>"><span class="ico" style="background:#D9822B"><i class="fas fa-file-zipper"></i></span><span><div class="t">Backup y restauración</div><div class="s">Copias de seguridad</div></span></a>
+                <a class="dv-tile" data-goto="backup"><span class="ico" style="background:#D9822B"><i class="fas fa-file-zipper"></i></span><span><div class="t">Backup y restauración</div><div class="s">Copias y restauración parcial</div></span></a>
             </div>
         </div>
         <div class="dv-group">
@@ -301,19 +352,53 @@ html[data-elurk-theme="dark"] .dv-badge.ok { background:#1B3329; color:#7ED6B0; 
         </div>
     </div>
 
-    <!-- ---- WordPress ---- -->
+    <!-- ---- Copias de seguridad (tipo Plesk: lista + restauracion parcial con doble lista) ---- -->
+    <div class="dv-pane" id="pane-backup" data-title="Copias">
+        <div class="dv-group">
+            <h3>Copias de seguridad de <?= $h($owner) ?>
+                <span class="dv-meta" style="font-weight:normal">las copias de Hestia son por usuario: incluyen <?= $h($domain) ?> y el resto de sus dominios</span>
+                <button class="dv-btn sec sm" id="bk-reload" type="button"><i class="fas fa-rotate"></i> Actualizar</button>
+                <a class="dv-btn sec sm" href="/list/backup/?<?= ltrim($back("backup"), "&") ?>"><i class="fas fa-gear"></i> Gestión nativa</a>
+            </h3>
+            <div id="bk-progress" hidden>
+                <div class="dv-msg info"><span class="dv-spin"></span> <span id="bk-progress-title">Restauración en curso…</span></div>
+                <div class="dv-log" id="bk-log"></div>
+            </div>
+            <div id="bk-msg"></div>
+            <div id="bk-list"><div class="dv-empty"><span class="dv-spin"></span> Cargando copias…</div></div>
+        </div>
+    </div>
+
+    <!-- ---- WordPress Toolkit (soberano): riesgo, componentes, medidas, herramientas ---- -->
     <div class="dv-pane" id="pane-wp" data-title="WordPress">
         <div class="dv-group">
-            <h3>WordPress en <?= $h($domain) ?></h3>
-            <?php if ($isWP): ?>
-                <div class="dv-empty" style="color:#212529"><i class="fab fa-wordpress" style="color:#21759B"></i> WordPress <b>detectado</b> en este dominio.
-                    <?php if ($isAdmin): ?><a class="dv-btn" style="margin-left:.6rem" href="/list/wp/?<?= ltrim($back("wp"), "&") ?>">Endurecer / Escanear</a><?php endif; ?>
-                </div>
-            <?php else: ?>
+            <?php if (!$isWP): ?>
+                <h3>WordPress en <?= $h($domain) ?></h3>
                 <div class="dv-empty">No se ha detectado WordPress en este dominio. Puedes instalarlo desde <a href="<?= $editWebInfo ?>">Editar dominio → Quick Install App</a>.</div>
+            <?php else: ?>
+                <h3>Estado de seguridad de WordPress
+                    <span class="dv-meta" id="wp-checked" style="font-weight:normal"></span>
+                    <button class="dv-btn sec sm" id="wp-refresh" type="button"><i class="fas fa-rotate"></i> Comprobar de nuevo</button>
+                </h3>
+                <div id="wp-msg"></div>
+                <div id="wp-loading" class="dv-empty"><span class="dv-spin"></span> Analizando WordPress (WP-CLI + vulnerabilidades)… la primera vez tarda un poco.</div>
+                <div id="wp-body" hidden>
+                    <div class="dv-cards" id="wp-cards"></div>
+                    <div class="dv-subtabs">
+                        <span class="dv-subtab active" data-sub="components">Componentes vulnerables</span>
+                        <span class="dv-subtab" data-sub="measures">Medidas de seguridad</span>
+                        <span class="dv-subtab" data-sub="tools">Herramientas</span>
+                    </div>
+                    <div id="wp-sub-components"></div>
+                    <div id="wp-sub-measures" hidden></div>
+                    <div id="wp-sub-tools" hidden></div>
+                </div>
             <?php endif; ?>
         </div>
     </div>
+
+    <!-- Contexto para el JS de Copias/WordPress -->
+    <div id="dv-ctx" hidden data-domain="<?= $h($domain) ?>" data-owner="<?= $h($owner) ?>" data-admin="<?= $isAdmin ? 1 : 0 ?>" data-wp="<?= $isWP ? 1 : 0 ?>" data-mail="<?= $hasMail ? 1 : 0 ?>"></div>
 
     <script>
     (function () {
@@ -475,5 +560,355 @@ html[data-elurk-theme="dark"] .dv-badge.ok { background:#1B3329; color:#7ED6B0; 
         if (h && document.getElementById("pane-" + h)) { show(h); }
     })();
     </script>
+    <script>
+    /* ===================== Copias + WordPress Toolkit (vista por dominio) ===================== */
+    (function () {
+        var ctx = document.getElementById("dv-ctx"); if (!ctx) { return; }
+        var TOKEN = document.getElementById("token").getAttribute("token");
+        var DOMAIN = ctx.dataset.domain, OWNER = ctx.dataset.owner, IS_ADMIN = ctx.dataset.admin === "1", IS_WP = ctx.dataset.wp === "1";
+        function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+        function post(data) {
+            data.token = TOKEN; data.domain = DOMAIN; data.user = OWNER;
+            var body = Object.keys(data).map(function (k) { return encodeURIComponent(k) + "=" + encodeURIComponent(data[k]); }).join("&");
+            return fetch("/list/domain/action.php", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: body, credentials: "same-origin" })
+                .then(function (r) { return r.text(); })
+                .then(function (t) { try { return JSON.parse(t); } catch (e) { return { ok: false, error: "respuesta no válida del servidor" }; } })
+                .catch(function () { return { ok: false, error: "error de red" }; });
+        }
+        function msg(el, kind, text) { if (!el) { return; } el.innerHTML = text ? '<div class="dv-msg ' + kind + '">' + esc(text) + "</div>" : ""; }
+        function fmtMB(mb) { if (mb == null || mb === "") { return "—"; } mb = Number(mb); return mb >= 1024 ? (mb / 1024).toFixed(1) + " GB" : mb + " MB"; }
+        function fmtBytes(b) { b = Number(b) || 0; if (b < 1024) { return b + " B"; } if (b < 1048576) { return (b / 1024).toFixed(1) + " KB"; } if (b < 1073741824) { return (b / 1048576).toFixed(1) + " MB"; } return (b / 1073741824).toFixed(2) + " GB"; }
+        var onShow = {};   /* callbacks al abrir una pestana (lazy) */
+        document.querySelectorAll(".dv-tab[data-pane], [data-goto]").forEach(function (t) {
+            t.addEventListener("click", function () { var n = t.dataset.pane || t.dataset.goto; if (onShow[n]) { onShow[n](); } });
+        });
+        function initialTab() { var h = (location.hash || "").replace("#", ""); if (h && onShow[h]) { onShow[h](); } }
+
+        /* ------------------------------------------------------------------ COPIAS ------ */
+        var bkList = document.getElementById("bk-list"), bkMsg = document.getElementById("bk-msg"), bkProg = document.getElementById("bk-progress"), bkLog = document.getElementById("bk-log");
+        var bkLoaded = false, bkBackups = [], pollTimer = null;
+        function loadBackups() {
+            bkList.innerHTML = '<div class="dv-empty"><span class="dv-spin"></span> Cargando copias…</div>';
+            post({ action: "bk-list" }).then(function (r) {
+                if (!r.ok) { bkList.innerHTML = '<div class="dv-empty">No se pudieron leer las copias: ' + esc(r.error || "") + "</div>"; return; }
+                bkBackups = r.backups || [];
+                if (!bkBackups.length) { bkList.innerHTML = '<div class="dv-empty">Este usuario no tiene copias todavía. Hestia las hace cada noche (según el paquete del usuario).</div>'; return; }
+                var html = '<table class="dv-table"><thead><tr><th>Fecha</th><th>Tipo</th><th>Tamaño</th><th>Contenido</th><th>Este dominio</th><th></th></tr></thead><tbody>';
+                bkBackups.forEach(function (b, i) {
+                    var inWeb = b.web.indexOf(DOMAIN) >= 0, inMail = b.mail.indexOf(DOMAIN) >= 0, inDns = b.dns.indexOf(DOMAIN) >= 0;
+                    var cont = b.kind === "incremental" ? "snapshot restic" : (b.web.length + " web · " + b.mail.length + " correo · " + b.db.length + " BBDD · " + b.dns.length + " DNS");
+                    var here = b.kind === "incremental" ? '<span class="dv-badge ok">incremental</span>' : ((inWeb ? '<span class="dv-badge ok">web</span> ' : "") + (inMail ? '<span class="dv-badge ok">correo</span> ' : "") + (inDns ? '<span class="dv-badge ok">DNS</span>' : "") || '<span class="dv-badge warn">no incluido</span>');
+                    html += "<tr><td><b>" + esc(b.date) + "</b> " + esc(b.time) + "</td><td>" + (b.kind === "incremental" ? "Incremental (restic)" : "Completa") + (b.local ? "" : ' <span class="dv-badge warn" title="Solo en el destino remoto">remota</span>') + "</td><td>" + fmtMB(b.size_mb) + "</td><td style=\"font-size:.85rem\">" + esc(cont) + "</td><td>" + here + "</td>" +
+                        '<td class="act">' + (b.kind === "full" && b.local ? '<a href="/download/backup/?backup=' + encodeURIComponent(b.id) + '&token=' + encodeURIComponent(TOKEN) + '" title="Descargar el archivo completo"><i class="fas fa-download"></i> Descargar</a>' : "") +
+                        '<button type="button" class="bk-restore-btn" data-i="' + i + '"' + (b.local ? "" : " disabled") + '><i class="fas fa-clock-rotate-left"></i> Restaurar</button></td></tr>';
+                });
+                bkList.innerHTML = html + "</tbody></table>";
+                bkList.querySelectorAll(".bk-restore-btn").forEach(function (btn) { btn.addEventListener("click", function () { openRestore(bkBackups[Number(btn.dataset.i)]); }); });
+            });
+        }
+        function pollStatus(force) {
+            post({ action: "bk-status" }).then(function (r) {
+                if (!r.ok) { return; }
+                if (r.running || force) {
+                    bkProg.hidden = false; bkLog.textContent = r.log || ""; bkLog.scrollTop = bkLog.scrollHeight;
+                    document.getElementById("bk-progress-title").textContent = r.running ? "Restauración en curso… (puedes salir de esta página, sigue en el servidor)" : (r.state === "ok" ? "Restauración terminada." : "La restauración terminó con errores. Revisa el registro.");
+                    bkProg.querySelector(".dv-msg").className = "dv-msg " + (r.running ? "info" : (r.state === "ok" ? "ok" : "err"));
+                    bkProg.querySelector(".dv-spin").style.display = r.running ? "" : "none";
+                    if (r.running) { pollTimer = setTimeout(function () { pollStatus(true); }, 3000); } else { loadBackups(); }
+                }
+            });
+        }
+        onShow.backup = function () { if (!bkLoaded) { bkLoaded = true; loadBackups(); pollStatus(false); } };
+        document.getElementById("bk-reload").addEventListener("click", function () { loadBackups(); pollStatus(false); });
+
+        /* ---- Modal de restauracion (doble lista tipo Plesk) ---- */
+        var TYPES = [
+            { id: "web", label: "Sitio web (archivos y configuración)", needs: "web" },
+            { id: "files", label: "Archivos sueltos del sitio", needs: "web" },
+            { id: "mailacc", label: "Cuentas de correo (buzones sueltos)", needs: "mail" },
+            { id: "maildom", label: "Dominio de correo completo", needs: "mail" },
+            { id: "db", label: "Bases de datos del usuario", needs: "db" },
+            { id: "dns", label: "Zona DNS", needs: "dns" }
+        ];
+        function openRestore(b) {
+            var bg = document.createElement("div"); bg.className = "dv-modal-bg";
+            bg.innerHTML = '<div class="dv-modal" role="dialog">' +
+                '<div class="mh"><h2>Restaurar la copia del ' + esc(b.date) + " " + esc(b.time) + '</h2><button type="button" class="x" title="Cerrar">&times;</button></div>' +
+                '<div class="mb">' +
+                '<div class="dv-form-row"><label>Detalles</label><div id="rs-details"><span class="dv-spin"></span> leyendo el contenido de la copia…</div></div>' +
+                '<div class="dv-form-row"><label>¿Qué quieres restaurar?</label><div class="dv-radio"><label><input type="radio" name="rs-scope" value="sel" checked> Objetos seleccionados</label><label><input type="radio" name="rs-scope" value="all"> Todo el dominio <span class="dv-meta">(web + correo + DNS de ' + esc(DOMAIN) + ")</span></label></div></div>" +
+                '<div class="dv-form-row" id="rs-type-row"><label>Tipo de objeto</label><select id="rs-type"></select></div>' +
+                '<div class="dv-form-row" id="rs-dual-row"><label id="rs-dual-label">Objetos</label><div>' +
+                    '<div class="dv-crumb" id="rs-crumb" hidden></div>' +
+                    '<div class="dv-dual"><div class="col"><h4>Disponibles:</h4><div class="tools"><input type="checkbox" id="rs-all-av" title="Marcar todos"><input type="search" id="rs-search" placeholder="Buscar…"></div><div class="dv-list" id="rs-avail"></div></div>' +
+                    '<div class="mid"><i class="fas fa-arrow-right-arrow-left"></i>Pulsa los objetos para moverlos de una lista a otra</div>' +
+                    '<div class="col"><h4>Seleccionados:</h4><div class="tools"><input type="checkbox" id="rs-all-sel" title="Quitar todos"><span class="dv-meta" id="rs-sel-count">Ningún objeto seleccionado</span></div><div class="dv-list" id="rs-sel"><div class="empty">Ningún objeto seleccionado</div></div></div></div>' +
+                "</div></div>" +
+                '<div class="dv-form-row" id="rs-opt-row"><label>Opciones</label><div class="dv-radio" id="rs-opts"></div></div>' +
+                '<div class="dv-form-row"><label>Aviso</label><div><label><input type="checkbox" id="rs-notify"> Enviar un correo al terminar (al contacto del usuario ' + esc(OWNER) + ")</label></div></div>" +
+                '<div id="rs-msg"></div></div>' +
+                '<div class="mf"><button type="button" class="dv-btn" id="rs-go" disabled>Restaurar</button><button type="button" class="dv-btn sec" id="rs-cancel">Cancelar</button></div></div>';
+            document.body.appendChild(bg);
+            var q = function (id) { return bg.querySelector("#" + id); };
+            var close = function () { bg.remove(); };
+            bg.querySelector(".x").addEventListener("click", close); q("rs-cancel").addEventListener("click", close);
+            bg.addEventListener("click", function (e) { if (e.target === bg) { close(); } });
+
+            var detail = null, avail = [], selected = [], filesPath = "", curType = "";
+            var sel = q("rs-type");
+            function renderLists() {
+                var f = (q("rs-search").value || "").toLowerCase();
+                var av = q("rs-avail"); av.innerHTML = "";
+                var shown = avail.filter(function (it) { return selected.indexOf(it.val) < 0 && (!f || it.name.toLowerCase().indexOf(f) >= 0); });
+                if (curType === "files") {
+                    q("rs-crumb").hidden = false;
+                    var parts = filesPath ? filesPath.split("/") : [], crumb = '<a href="#" data-p="">' + esc(DOMAIN) + "</a>";
+                    parts.forEach(function (p, i) { crumb += " / " + '<a href="#" data-p="' + esc(parts.slice(0, i + 1).join("/")) + '">' + esc(p) + "</a>"; });
+                    q("rs-crumb").innerHTML = crumb;
+                    q("rs-crumb").querySelectorAll("a").forEach(function (a) { a.addEventListener("click", function (e) { e.preventDefault(); loadFiles(a.dataset.p); }); });
+                } else { q("rs-crumb").hidden = true; }
+                if (!shown.length) { av.innerHTML = '<div class="empty">' + (avail.length ? "Nada más que mostrar." : "No hay objetos de este tipo en la copia.") + "</div>"; }
+                shown.forEach(function (it) {
+                    var d = document.createElement("div"); d.className = "it";
+                    d.innerHTML = '<input type="checkbox" class="dv-check"><span class="nm" title="' + esc(it.val) + '">' + (it.dir ? '<i class="fas fa-folder" style="color:#D9822B"></i> ' : "") + esc(it.name) + "</span>" + (it.size != null && !it.dir ? '<span class="sz">' + fmtBytes(it.size) + "</span>" : "") + (it.dir ? '<span class="op" data-open="1">Abrir ›</span>' : "");
+                    d.addEventListener("click", function (e) { if (e.target.dataset.open) { e.stopPropagation(); loadFiles(it.val); return; } selected.push(it.val); renderLists(); });
+                    av.appendChild(d);
+                });
+                var sl = q("rs-sel"); sl.innerHTML = "";
+                if (!selected.length) { sl.innerHTML = '<div class="empty">Ningún objeto seleccionado</div>'; }
+                selected.forEach(function (v) {
+                    var d = document.createElement("div"); d.className = "it";
+                    d.innerHTML = '<input type="checkbox" class="dv-check" checked><span class="nm" title="' + esc(v) + '">' + esc(v) + "</span>";
+                    d.addEventListener("click", function () { selected = selected.filter(function (x) { return x !== v; }); renderLists(); });
+                    sl.appendChild(d);
+                });
+                q("rs-sel-count").textContent = selected.length ? selected.length + " objeto(s)" : "Ningún objeto seleccionado";
+                updateGo();
+            }
+            function updateGo() {
+                var scope = bg.querySelector("input[name=rs-scope]:checked").value;
+                q("rs-go").disabled = !(scope === "all" || selected.length > 0);
+            }
+            function setAvail(items) { avail = items; renderLists(); }
+            function loadFiles(path) {
+                filesPath = path || "";
+                q("rs-avail").innerHTML = '<div class="empty"><span class="dv-spin"></span> leyendo…</div>';
+                post({ action: "bk-files", backup: b.id, path: filesPath }).then(function (r) {
+                    if (!r.ok) { q("rs-avail").innerHTML = '<div class="empty">' + esc(r.error) + "</div>"; return; }
+                    if (r.building) { q("rs-avail").innerHTML = '<div class="empty"><span class="dv-spin"></span> Generando el índice de archivos de esta copia (se lee todo el sitio comprimido: puede tardar varios minutos). Se actualiza solo.</div>'; setTimeout(function () { if (document.body.contains(bg) && curType === "files") { loadFiles(filesPath); } }, 5000); return; }
+                    setAvail((r.items || []).map(function (it) { return { val: it.path, name: it.name, dir: it.dir, size: it.size }; }));
+                });
+            }
+            function renderOpts() {
+                var o = q("rs-opts"), t = curType;
+                if (t === "web" || t === "maildom" || t === "dns") {
+                    o.innerHTML = '<label><input type="radio" name="rs-mode" value="full" checked> Configuración y contenido de los objetos seleccionados</label><label><input type="radio" name="rs-mode" value="config"> Solo la configuración (no toca archivos ni buzones)</label>';
+                } else if (t === "mailacc") {
+                    o.innerHTML = '<label><input type="radio" name="rs-mode" value="merge" checked> Fusionar con el buzón actual (no se borra nada de lo que hay ahora)</label><label><input type="radio" name="rs-mode" value="folder"> Dejar el correo recuperado en una carpeta <b>RESTAURADO-fecha</b> dentro del buzón</label>';
+                } else if (t === "files") {
+                    o.innerHTML = '<span class="dv-meta">Los archivos seleccionados se copian encima de los actuales (los que no estén en la copia no se tocan).</span>';
+                } else {
+                    o.innerHTML = '<span class="dv-meta">Las bases de datos se sustituyen por el volcado de la copia.</span>';
+                }
+            }
+            function setType(t) {
+                curType = t; selected = []; filesPath = ""; q("rs-search").value = "";
+                renderOpts();
+                if (t === "web") { setAvail(detail.has_web ? [{ val: DOMAIN, name: DOMAIN + " (sitio web)" }] : []); }
+                else if (t === "dns") { setAvail(detail.has_dns ? [{ val: DOMAIN, name: DOMAIN + " (zona DNS)" }] : []); }
+                else if (t === "maildom") { setAvail(detail.has_mail ? [{ val: DOMAIN, name: DOMAIN + " (todos los buzones)" }] : []); }
+                else if (t === "db") { setAvail((detail.db || []).map(function (n) { return { val: n, name: n }; })); }
+                else if (t === "mailacc") {
+                    q("rs-avail").innerHTML = '<div class="empty"><span class="dv-spin"></span> leyendo buzones…</div>';
+                    post({ action: "bk-mail-accounts", backup: b.id }).then(function (r) {
+                        if (!r.ok) { setAvail([]); q("rs-avail").innerHTML = '<div class="empty">' + esc(r.error) + "</div>"; return; }
+                        setAvail((r.accounts || []).map(function (a) { return { val: a.account, name: a.account + "@" + DOMAIN + (a.disk_mb ? "  (" + a.disk_mb + " MB)" : "") }; }));
+                    });
+                }
+                else if (t === "files") { loadFiles(""); }
+            }
+            sel.addEventListener("change", function () { setType(sel.value); });
+            q("rs-search").addEventListener("input", renderLists);
+            q("rs-all-av").addEventListener("change", function () { if (this.checked) { var f = (q("rs-search").value || "").toLowerCase(); avail.forEach(function (it) { if (selected.indexOf(it.val) < 0 && (!f || it.name.toLowerCase().indexOf(f) >= 0)) { selected.push(it.val); } }); } this.checked = false; renderLists(); });
+            q("rs-all-sel").addEventListener("change", function () { selected = []; this.checked = false; renderLists(); });
+            bg.querySelectorAll("input[name=rs-scope]").forEach(function (r) { r.addEventListener("change", function () { var all = r.value === "all" && r.checked; q("rs-type-row").style.display = all ? "none" : ""; q("rs-dual-row").style.display = all ? "none" : ""; q("rs-opt-row").style.display = all ? "none" : ""; updateGo(); }); });
+
+            post({ action: "bk-detail", backup: b.id }).then(function (r) {
+                if (!r.ok) { q("rs-details").innerHTML = '<span style="color:#A32633">' + esc(r.error) + "</span>"; return; }
+                detail = r;
+                q("rs-details").innerHTML = "<b>" + (r.kind === "incremental" ? "Copia incremental (restic)" : "Copia completa") + "</b>" + (r.size_mb ? " · " + fmtMB(r.size_mb) : "") + " · " + esc(DOMAIN) + ": " + (r.has_web ? "sitio web ✓ " : "sin web ") + (r.has_mail ? "· correo ✓ " : "· sin correo ") + (r.has_dns ? "· DNS ✓" : "· sin DNS") + " · " + (r.db || []).length + " base(s) de datos del usuario";
+                sel.innerHTML = "";
+                TYPES.forEach(function (t) {
+                    var ok = (t.needs === "web" && r.has_web) || (t.needs === "mail" && r.has_mail) || (t.needs === "dns" && r.has_dns) || (t.needs === "db" && (r.db || []).length);
+                    var o = document.createElement("option"); o.value = t.id; o.textContent = t.label + (ok ? "" : " (no está en esta copia)"); o.disabled = !ok; sel.appendChild(o);
+                });
+                var first = sel.querySelector("option:not([disabled])"); if (first) { sel.value = first.value; setType(first.value); } else { setAvail([]); }
+            });
+
+            q("rs-go").addEventListener("click", function () {
+                var scope = bg.querySelector("input[name=rs-scope]:checked").value;
+                var modeEl = bg.querySelector("input[name=rs-mode]:checked"), mode = modeEl ? modeEl.value : "";
+                var summary, req;
+                if (scope === "all") {
+                    summary = "TODO el dominio " + DOMAIN + " (web, correo y DNS) de la copia del " + b.date + ". Se sobrescribe lo actual.";
+                    req = { action: "bk-restore", backup: b.id, web: detail.has_web ? DOMAIN : "", mail: detail.has_mail ? DOMAIN : "", dns: detail.has_dns ? DOMAIN : "" };
+                } else if (curType === "web") {
+                    if (mode === "config") { summary = "solo la CONFIGURACIÓN web de " + DOMAIN + " (no toca archivos)."; req = { action: "bk-restore-config", backup: b.id, what: "web" }; }
+                    else { summary = "el sitio web " + DOMAIN + " completo (archivos + configuración). Se sobrescriben los archivos actuales."; req = { action: "bk-restore", backup: b.id, web: DOMAIN }; }
+                } else if (curType === "dns") {
+                    summary = "la zona DNS de " + DOMAIN + "."; req = mode === "config" ? { action: "bk-restore-config", backup: b.id, what: "dns" } : { action: "bk-restore", backup: b.id, dns: DOMAIN };
+                } else if (curType === "maildom") {
+                    if (mode === "config") { summary = "solo la CONFIGURACIÓN de correo de " + DOMAIN + " (cuentas, alias, contraseñas; no toca los buzones)."; req = { action: "bk-restore-config", backup: b.id, what: "mail" }; }
+                    else { summary = "el dominio de correo " + DOMAIN + " completo, con TODOS sus buzones (se sobrescriben)."; req = { action: "bk-restore", backup: b.id, mail: DOMAIN }; }
+                } else if (curType === "mailacc") {
+                    summary = selected.length + " buzón(es): " + selected.join(", ") + (mode === "folder" ? " → en carpeta RESTAURADO-fecha." : " → fusionados con el buzón actual."); req = { action: "bk-restore-mail", backup: b.id, accounts: selected.join(","), how: mode };
+                } else if (curType === "db") {
+                    summary = selected.length + " base(s) de datos: " + selected.join(", ") + ". Se SUSTITUYEN por el volcado de la copia."; req = { action: "bk-restore", backup: b.id, db: selected.join(",") };
+                } else if (curType === "files") {
+                    summary = selected.length + " ruta(s): " + selected.join(", ") + " → se copian encima de las actuales."; req = { action: "bk-restore-files", backup: b.id, paths: selected.join(",") };
+                } else { return; }
+                if (!window.confirm("Vas a restaurar " + summary + "\n\n¿Continuar?")) { return; }
+                req.notify = q("rs-notify").checked ? "yes" : "no";
+                q("rs-go").disabled = true; msg(q("rs-msg"), "info", "Enviando…");
+                post(req).then(function (r) {
+                    if (!r.ok) { q("rs-go").disabled = false; msg(q("rs-msg"), "err", r.error || "error"); return; }
+                    close();
+                    if (r.started) { msg(bkMsg, "info", "Restauración iniciada en segundo plano: " + (r.job || "")); pollStatus(true); }
+                    else { msg(bkMsg, "ok", r.summary || "Hecho."); loadBackups(); }
+                });
+            });
+        }
+
+        /* ------------------------------------------------------------------ WORDPRESS --- */
+        if (IS_WP) {
+            var wpBody = document.getElementById("wp-body"), wpLoading = document.getElementById("wp-loading"), wpMsg = document.getElementById("wp-msg"), wpLoaded = false, ST = null;
+            function riskClass(s) { s = Number(s) || 0; return s <= 0 ? "r0" : s < 4 ? "r1" : s < 7 ? "r2" : "r3"; }
+            function riskLabel(s) { s = Number(s) || 0; return s <= 0 ? "SIN RIESGO CONOCIDO" : s.toFixed(1) + " RIESGO"; }
+            function loadWP(refresh) {
+                wpLoading.hidden = false; wpBody.hidden = true; msg(wpMsg, "", "");
+                post({ action: "wp-status", refresh: refresh ? "1" : "0" }).then(function (r) {
+                    wpLoading.hidden = true;
+                    if (!r.ok) { msg(wpMsg, "err", r.error || "error"); return; }
+                    ST = r; renderWP();
+                });
+            }
+            function renderWP() {
+                var r = ST; wpBody.hidden = false;
+                document.getElementById("wp-checked").textContent = "Comprobado: " + (r.checked_at || "") + (r.cached ? " (caché)" : "") + " · vulnerabilidades: " + (r.vuln_source || "");
+                var core = (r.components || []).filter(function (c) { return c.type === "core"; })[0] || {};
+                var upd = (r.updates || []).length, pend = r.measures_pending || 0;
+                var cards = '<div class="dv-card"><div class="h">Riesgo de seguridad <i class="fas fa-circle-question" title="Puntuación CVSS más alta entre las vulnerabilidades conocidas que afectan a las versiones instaladas (0 a 10)."></i></div><div class="big">' + (Number(r.risk) || 0).toFixed(1) + "<small> /10</small></div>" + '<div class="s">' + (r.risk > 0 ? "Actualiza o desactiva los componentes marcados abajo." : "Ninguna vulnerabilidad conocida en las versiones instaladas.") + "</div></div>";
+                cards += '<div class="dv-card"><div class="h">' + (upd ? "Hay actualizaciones" : "Todo actualizado") + ' <i class="fas fa-circle-up"></i></div><div class="big">' + upd + "<small> pendientes</small></div>" + '<div class="f">' + (upd ? '<button type="button" class="dv-btn sm" id="wp-update-all">Instalar ' + upd + " actualizacion" + (upd === 1 ? "" : "es") + "</button>" : "") + "</div></div>";
+                cards += '<div class="dv-card"><div class="h">Medidas de seguridad <i class="fas fa-list-check"></i></div><div class="big">' + pend + "<small> por aplicar</small></div>" + '<div class="f">' + (pend ? '<button type="button" class="dv-btn sm" id="wp-apply-all">Aplicar todas</button>' : "") + '<button type="button" class="dv-btn sec sm" id="wp-recheck" title="Comprobar de nuevo"><i class="fas fa-rotate"></i></button></div></div>';
+                cards += '<div class="dv-card"><div class="h">Versiones <i class="fab fa-wordpress"></i></div><div class="big" style="font-size:1.3rem">WordPress ' + esc(core.version || "?") + "</div>" + '<div class="s">PHP ' + esc(r.php || "?") + (core.update_version ? ' · <b style="color:#B4460F">WordPress ' + esc(core.update_version) + " disponible</b>" : "") + (r.wpcli ? "" : ' · <b style="color:#A32633">WP-CLI no instalado</b>') + "</div></div>";
+                document.getElementById("wp-cards").innerHTML = cards;
+                var ua = document.getElementById("wp-update-all"); if (ua) { ua.addEventListener("click", function () { updateAll(); }); }
+                var aa = document.getElementById("wp-apply-all"); if (aa) { aa.addEventListener("click", function () { applyMeasures("all"); }); }
+                document.getElementById("wp-recheck").addEventListener("click", function () { loadWP(true); });
+                renderComponents(); renderMeasures(); renderTools();
+                if (!r.wpcli) { msg(wpMsg, "info", "Sin WP-CLI solo se ven el núcleo y las medidas de archivos. Instala WP-CLI para el usuario " + OWNER + " para ver plugins, temas y actualizaciones." + (IS_ADMIN ? "" : " Pídeselo al administrador.")); if (IS_ADMIN) { wpMsg.firstChild.innerHTML += ' <button type="button" class="dv-btn sm" id="wp-cli-install">Instalar WP-CLI</button>'; document.getElementById("wp-cli-install").addEventListener("click", function () { this.disabled = true; post({ action: "wp-wpcli-install" }).then(function (x) { msg(wpMsg, x.ok ? "ok" : "err", x.ok ? "WP-CLI instalado. Volviendo a comprobar…" : (x.error || "error")); if (x.ok) { loadWP(true); } }); }); } }
+            }
+            function renderComponents() {
+                var comps = ST.components || [], el = document.getElementById("wp-sub-components");
+                if (!comps.length) { el.innerHTML = '<div class="dv-empty">Sin datos de componentes.</div>'; return; }
+                var html = '<table class="dv-table"><thead><tr><th style="width:130px">Riesgo</th><th>Componente</th><th>Estado</th><th></th></tr></thead><tbody>';
+                comps.forEach(function (c) {
+                    var vul = (c.vulns || []).slice(0, 4).map(function (v) { return "<li>" + (v.link ? '<a href="' + esc(v.link) + '" target="_blank" rel="noopener">' + esc(v.name) + "</a>" : esc(v.name)) + " · CVSS " + esc(v.score) + (v.fixed_in ? " · corregido en " + esc(v.fixed_in) : "") + "</li>"; }).join("");
+                    if ((c.vulns || []).length > 4) { vul += "<li>… y " + ((c.vulns || []).length - 4) + " más</li>"; }
+                    html += '<tr><td><span class="dv-risk ' + riskClass(c.risk) + '">' + riskLabel(c.risk) + "</span>" + (c.vuln_checked ? "" : '<div class="dv-meta" style="font-size:.7rem">sin datos de vulnerabilidades</div>') + "</td>" +
+                        "<td><b>" + esc(c.title) + "</b> " + esc(c.version) + ' <span class="dv-meta">' + (c.type === "core" ? "núcleo" : c.type === "plugin" ? "plugin" : "tema") + "</span>" + (vul ? '<ul class="dv-vulns">' + vul + "</ul>" : "") + "</td>" +
+                        "<td>" + (c.type === "core" ? "" : (c.status === "active" ? '<span class="dv-badge ok">activo</span>' : '<span class="dv-badge warn">' + esc(c.status) + "</span>")) + "</td>" +
+                        '<td class="act">' + (c.update_version ? '<button type="button" data-upd="' + esc(c.type) + "|" + esc(c.slug) + '">Actualizar a ' + esc(c.update_version) + "</button>" : "") + (c.type === "plugin" && c.status === "active" ? '<button type="button" data-deact="' + esc(c.slug) + '">Desactivar</button>' : "") + "</td></tr>";
+                });
+                el.innerHTML = html + "</tbody></table>";
+                el.querySelectorAll("[data-upd]").forEach(function (b) { b.addEventListener("click", function () { var p = b.dataset.upd.split("|"); runWP(b, { action: "wp-update", kind: p[0], slug: p[1] }, "Actualizando " + p[1] + "…"); }); });
+                el.querySelectorAll("[data-deact]").forEach(function (b) { b.addEventListener("click", function () { if (window.confirm("¿Desactivar el plugin " + b.dataset.deact + "?")) { runWP(b, { action: "wp-deactivate", slug: b.dataset.deact }, "Desactivando…"); } }); });
+            }
+            function renderMeasures() {
+                var ms = ST.measures || [], el = document.getElementById("wp-sub-measures");
+                var html = '<p class="dv-meta" style="margin-top:0">Las medidas críticas se aplican solas al instalar WordPress con el panel; el resto se aplican aquí. Si alguna rompe algo del sitio, revierte la que sea reversible. Haz una copia antes de asegurar.</p>' +
+                    '<div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.6rem;flex-wrap:wrap"><button type="button" class="dv-btn sm" id="wp-secure">Asegurar seleccionadas</button><button type="button" class="dv-btn sec sm" id="wp-check"><i class="fas fa-rotate"></i> Comprobar</button><button type="button" class="dv-btn sec sm" id="wp-revert">Revertir seleccionadas</button><span class="dv-meta">Estado comprobado: ' + esc(ST.checked_at || "") + "</span></div>" +
+                    '<table class="dv-table"><thead><tr><th style="width:36px"><input type="checkbox" id="wp-m-all"></th><th>Medida de seguridad</th><th style="width:90px;text-align:center">Estado</th></tr></thead><tbody>';
+                ms.forEach(function (m) {
+                    var ico = m.status === "ok" ? "fa-circle-check" : m.status === "crit" ? "fa-circle-exclamation" : m.status === "warn" ? "fa-triangle-exclamation" : "fa-circle-question";
+                    html += '<tr><td><input type="checkbox" class="wp-m" value="' + esc(m.id) + '"' + (m.status === "crit" ? " checked" : "") + "></td><td>" + esc(m.name) + ' <i class="fas fa-circle-info" style="color:#B0BAC4" title="' + esc(m.description) + '"></i> ' + (m.reversible ? '<span class="dv-meta">(reversible)</span>' : "") + (m.manual ? ' <span class="dv-meta">(manual)</span>' : "") + (m.info ? ' <span class="dv-meta">· ' + esc(m.info) + "</span>" : "") + '</td><td style="text-align:center"><i class="fas ' + ico + ' dv-status ' + esc(m.status) + '" title="' + esc(m.status) + '"></i></td></tr>';
+                });
+                el.innerHTML = html + "</tbody></table>";
+                document.getElementById("wp-m-all").addEventListener("change", function () { var on = this.checked; el.querySelectorAll(".wp-m").forEach(function (c) { c.checked = on; }); });
+                var selIds = function () { return Array.prototype.map.call(el.querySelectorAll(".wp-m:checked"), function (c) { return c.value; }); };
+                document.getElementById("wp-secure").addEventListener("click", function () { var ids = selIds(); if (!ids.length) { msg(wpMsg, "info", "Marca al menos una medida."); return; } applyMeasures(ids.join(",")); });
+                document.getElementById("wp-revert").addEventListener("click", function () { var ids = selIds(); if (!ids.length) { msg(wpMsg, "info", "Marca al menos una medida."); return; } if (!window.confirm("¿Revertir " + ids.length + " medida(s)?")) { return; } runWP(this, { action: "wp-revert", measures: ids.join(",") }, "Revirtiendo…"); });
+                document.getElementById("wp-check").addEventListener("click", function () { loadWP(true); });
+            }
+            function applyMeasures(ids) {
+                if (!window.confirm(ids === "all" ? "Se aplican todas las medidas automáticas (las no reversibles incluidas: claves de seguridad). ¿Continuar?" : "¿Aplicar las medidas seleccionadas?")) { return; }
+                runWP(null, { action: "wp-apply", measures: ids }, "Aplicando medidas…");
+            }
+            function updateAll() {
+                if (!window.confirm("Se actualizan núcleo, plugins y temas con actualización pendiente. Conviene tener una copia reciente (pestaña Copias). ¿Continuar?")) { return; }
+                msg(wpMsg, "info", "Actualizando… puede tardar varios minutos.");
+                var steps = [];
+                if ((ST.updates || []).some(function (u) { return u.type === "plugin"; })) { steps.push({ action: "wp-update", kind: "plugin", slug: "all" }); }
+                if ((ST.updates || []).some(function (u) { return u.type === "theme"; })) { steps.push({ action: "wp-update", kind: "theme", slug: "all" }); }
+                if ((ST.updates || []).some(function (u) { return u.type === "core"; })) { steps.push({ action: "wp-update", kind: "core", slug: "wordpress" }); }
+                var log = [];
+                (function next() {
+                    if (!steps.length) { msg(wpMsg, "ok", "Actualizaciones terminadas. " + log.join(" · ").slice(0, 600)); loadWP(true); return; }
+                    post(steps.shift()).then(function (r) { log.push(r.ok ? (r.summary || "ok").split("\n").slice(-1)[0] : "ERROR: " + (r.error || "")); next(); });
+                })();
+            }
+            function runWP(btn, req, working) {
+                if (btn) { btn.disabled = true; }
+                msg(wpMsg, "info", working);
+                post(req).then(function (r) {
+                    if (btn) { btn.disabled = false; }
+                    if (r.ok) { msg(wpMsg, "ok", (r.summary || ((r.done || []).length ? "Hecho: " + r.done.join(", ") : "Hecho.")) + ((r.errors || []).length ? " · Avisos: " + r.errors.join("; ") : "")); }
+                    else { msg(wpMsg, "err", r.error || ((r.errors || []).join("; ")) || "error"); }
+                    loadWP(true);
+                });
+            }
+            function renderTools() {
+                var t = ST.tools || {}, el = document.getElementById("wp-sub-tools");
+                function tog(id, on, label, hint, disabled) { return '<div class="dv-toggle"><span class="sw ' + (on ? "on" : "") + (disabled ? " off-dis" : "") + '" data-tool="' + id + '" data-on="' + (on ? 1 : 0) + '"' + (disabled ? ' data-dis="1"' : "") + "></span><span>" + label + '</span><span class="hint">' + hint + "</span></div>"; }
+                var html = '<div class="dv-cards"><div class="dv-card"><div class="h">Herramientas</div>' +
+                    '<div class="dv-toggle"><b>PHP</b> <span>' + esc(t.php || "?") + '</span> <a href="<?= $editWebInfo ?>" class="hint">Cambiar versión</a></div>' +
+                    tog("debug", t.debug, "Depuración", "WP_DEBUG + registro en wp-content/debug.log, sin mostrar errores en pantalla") +
+                    tog("httpauth", t.httpauth && t.httpauth.on, "Protección con contraseña", t.httpauth && t.httpauth.on ? "usuario(s): " + esc((t.httpauth.users || []).join(", ")) : "pide usuario y contraseña para ver el sitio (Hestia httpauth)") +
+                    tog("maintenance", t.maintenance, "Modo mantenimiento", "los visitantes ven una página 503; tú sigues entrando en wp-admin") +
+                    "</div>" +
+                    '<div class="dv-card"><div class="h">Rendimiento</div>' +
+                    tog("indexing", t.indexing === true, "Indexación por buscadores", t.indexing == null ? "necesita WP-CLI" : "ajuste 'Visibilidad en buscadores' de WordPress", t.indexing == null) +
+                    tog("cache", t.cache && t.cache.on, "Caché (nginx FastCGI)", t.cache && t.cache.available ? (t.cache.on ? "activa · " + esc(t.cache.duration || "") : "acelera las páginas para visitantes no identificados") : esc((t.cache && t.cache.reason) || "no disponible"), !(t.cache && t.cache.available)) +
+                    tog("wpcron", t.wpcron && t.wpcron.on, "Tomar el control de wp-cron.php", "cron real del sistema cada 5 min y DISABLE_WP_CRON; más fiable y más rápido") +
+                    "</div></div>";
+                el.innerHTML = html;
+                el.querySelectorAll(".sw").forEach(function (sw) {
+                    sw.addEventListener("click", function () {
+                        if (sw.dataset.dis) { return; }
+                        var tool = sw.dataset.tool, on = sw.dataset.on === "1", req = { action: "wp-toggle", tool: tool, state: on ? "off" : "on" };
+                        if (tool === "httpauth" && !on) {
+                            var u = window.prompt("Usuario para el acceso protegido:"); if (!u) { return; }
+                            var p = window.prompt("Contraseña (mínimo 6 caracteres):"); if (!p || p.length < 6) { msg(wpMsg, "err", "Contraseña demasiado corta."); return; }
+                            req.authuser = u; req.authpass = p;
+                        }
+                        if (tool === "maintenance" && !on && !window.confirm("El sitio mostrará una página de mantenimiento a los visitantes. ¿Activar?")) { return; }
+                        msg(wpMsg, "info", "Aplicando…");
+                        post(req).then(function (r) { if (r.ok) { msg(wpMsg, "ok", "Hecho."); if (r.tools) { ST.tools = r.tools; renderTools(); } else { loadWP(true); } } else { msg(wpMsg, "err", r.error || "error"); } });
+                    });
+                });
+            }
+            document.querySelectorAll(".dv-subtab").forEach(function (t) {
+                t.addEventListener("click", function () {
+                    document.querySelectorAll(".dv-subtab").forEach(function (x) { x.classList.toggle("active", x === t); });
+                    ["components", "measures", "tools"].forEach(function (n) { document.getElementById("wp-sub-" + n).hidden = (n !== t.dataset.sub); });
+                });
+            });
+            document.getElementById("wp-refresh").addEventListener("click", function () { loadWP(true); });
+            onShow.wp = function () { if (!wpLoaded) { wpLoaded = true; loadWP(false); } };
+        }
+        initialTab();
+    })();
+    </script>
+
 <?php endif; ?>
 </div>

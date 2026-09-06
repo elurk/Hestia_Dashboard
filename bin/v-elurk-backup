@@ -1,0 +1,515 @@
+#!/bin/bash
+# v-elurk-backup  -  Copias de seguridad tipo Plesk sobre las copias de HestiaCP.
+#
+# Se ejecuta como root via sudo desde el panel (sudoers acotado a este script).
+# Salida SIEMPRE JSON. Concede solo estas acciones:
+#
+#   list    USER                       -> copias del usuario (tar clasico + snapshots restic)
+#   detail  USER COPIA [DOMINIO]       -> contenido de una copia, filtrado a un dominio
+#   mail-accounts USER COPIA DOMINIO   -> buzones de ese dominio dentro de la copia
+#   files   USER COPIA DOMINIO [RUTA]  -> archivos del dominio dentro de la copia (un nivel)
+#   index   USER COPIA DOMINIO         -> genera el indice de archivos (segundo plano)
+#   status  USER                       -> tarea en curso + ultimas lineas del registro
+#   restore USER COPIA --web a,b --mail c --dns d --db e [--notify yes]
+#                                      -> objetos completos (delegado a Hestia, 2o plano)
+#   restore-mail-account USER COPIA DOMINIO CUENTA[,CUENTA] [merge|folder]
+#                                      -> buzones sueltos (2o plano)
+#   restore-files USER COPIA DOMINIO RUTA[,RUTA]
+#                                      -> archivos/carpetas sueltos del dominio (2o plano)
+#   restore-config USER COPIA DOMINIO web|mail|dns
+#                                      -> SOLO configuracion, sin contenido
+#   hosts                              -> destinos remotos configurados (admin)
+#
+# COPIA = nombre del tar (usuario.AAAA-MM-DD_HH-MM-SS.tar) o id de snapshot restic
+# (hex). El script decide el modo por el formato.
+#
+# Hechos del formato de Hestia en los que se apoya (verificados en bin/v-backup-user):
+#   web/DOM/hestia/web.conf, web/DOM/domain_data.tar.{zst,gz}  (miembros con ./ delante)
+#   mail/DOM/hestia/{mail.conf,DOM.conf}, mail/DOM/accounts.tar.{zst,gz} (un dir por cuenta)
+#   dns/DOM/hestia/{dns.conf,DOM.conf}, db/NOMBRE/..., cron/, user_dir/
+# En modo restic los mismos .conf estan en /home/USER/backup/... dentro del snapshot y
+# los datos en sus rutas reales (/home/USER/web/DOM, /home/USER/mail/DOM/CUENTA).
+
+set -u
+# sudo resetea PATH (secure_path) y deja fuera los comandos v-* de Hestia.
+export PATH="/usr/local/hestia/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
+
+HESTIA="/usr/local/hestia"
+[ -f "$HESTIA/conf/hestia.conf" ] && source "$HESTIA/conf/hestia.conf"
+BACKUP_DIR="${BACKUP:-/backup}"
+HOMEDIR_BASE="${HOMEDIR:-/home}"
+INDEX_DIR="$BACKUP_DIR/.elurk-index"
+CONF_BAK_DIR="$INDEX_DIR/conf-bak"
+LOG_DIR="/var/log/hestia"
+
+# ---------------------------------------------------------------- utilidades ---
+json_err() { python3 -c 'import json,sys; print(json.dumps({"ok":False,"error":sys.argv[1]}, ensure_ascii=False))' "$1"; exit 0; }
+json_ok()  { python3 -c 'import json,sys; d=json.loads(sys.argv[1]) if len(sys.argv)>1 and sys.argv[1] else {}; d["ok"]=True; print(json.dumps(d, ensure_ascii=False))' "${1:-}"; exit 0; }
+log() { echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"; }
+
+valid_user()   { echo "$1" | grep -qE '^[a-zA-Z0-9_-]{1,32}$' && [ -d "$HESTIA/data/users/$1" ]; }
+valid_domain() { echo "$1" | grep -qE '^[a-zA-Z0-9.-]{1,253}$' && ! echo "$1" | grep -q '\.\.'; }
+valid_account(){ echo "$1" | grep -qE '^[a-zA-Z0-9._-]{1,64}$' && ! echo "$1" | grep -q '\.\.'; }
+# Rutas relativas dentro del dominio: sin barra inicial, sin '..', sin caracteres raros.
+valid_relpath(){
+    [ -n "$1" ] && [ ${#1} -le 400 ] || return 1
+    printf '%s' "$1" | LC_ALL=C grep -qE '^[^/]' || return 1                        # sin barra inicial
+    printf '%s' "$1" | grep -q ',' && return 1                                        # la coma es el separador de la lista
+    printf '%s' "$1" | LC_ALL=C grep -qE '[[:cntrl:]\\"'"'"'`$;|&<>*?]' && return 1  # nada ejecutable ni comodines
+    printf '%s' "$1" | grep -qE '(^|/)\.\.(/|$)' && return 1                        # sin subir de directorio
+    return 0
+}
+
+mode_of() {   # tar | restic | ''
+    if echo "$1" | grep -qE '^[a-zA-Z0-9_-]+\.[0-9]{4}-[0-9]{2}-[0-9]{2}_[0-9]{2}-[0-9]{2}-[0-9]{2}\.tar$'; then echo tar
+    elif echo "$1" | grep -qE '^[0-9a-f]{8,64}$'; then echo restic
+    fi
+}
+
+# La copia debe estar registrada para ESE usuario (evita rutas arbitrarias).
+check_backup() {  # user copia -> define MODE, TARF
+    MODE=$(mode_of "$2")
+    case "$MODE" in
+        tar)
+            grep -q "BACKUP='$2'" "$HESTIA/data/users/$1/backup.conf" 2>/dev/null || json_err "copia no registrada para este usuario"
+            TARF="$BACKUP_DIR/$2"
+            [ -f "$TARF" ] || json_err "el archivo de la copia no esta en $BACKUP_DIR (esta solo en el destino remoto?)"
+            ;;
+        restic)
+            restic_ready "$1" || json_err "restic no esta configurado para este usuario"
+            ;;
+        *) json_err "identificador de copia invalido" ;;
+    esac
+}
+
+restic_ready() { [ -f "$HESTIA/conf/restic.conf" ] && [ -f "$HESTIA/data/users/$1/restic.conf" ]; }
+restic_cmd()   { # user -> imprime el prefijo del comando
+    local REPO=""
+    source "$HESTIA/conf/restic.conf"
+    echo "restic --repo ${REPO%/}/$1 --password-file $HESTIA/data/users/$1/restic.conf"
+}
+
+# Extrae a stdout un miembro del tar (rapido: tar salta los datos de los demas miembros).
+tar_member() { tar -xOf "$TARF" "$1" 2>/dev/null; }
+# Nombre real del sub-tar (zst o gz) y su descompresor.
+find_subtar() {  # prefijo (p.ej. web/DOM/domain_data.tar) -> MEMBER, DECOMP
+    MEMBER=$(tar -tf "$TARF" --wildcards "$1.*" 2>/dev/null | head -1)
+    [ -n "$MEMBER" ] || return 1
+    case "$MEMBER" in
+        *.zst) DECOMP="zstd -dc" ;;
+        *.gz)  DECOMP="gzip -dc" ;;
+        *)     DECOMP="cat" ;;
+    esac
+}
+
+user_log() { echo "$LOG_DIR/elurk-restore.$1.log"; }
+lock_of()  { echo "/run/elurk-restore.$1.lock"; }
+
+# Lanza una funcion en segundo plano con cerrojo por usuario; el panel consulta status.
+run_bg() {  # user descripcion funcion args...
+    local u="$1" desc="$2"; shift 2
+    local lg; lg=$(user_log "$u")
+    mkdir -p "$LOG_DIR"; touch "$lg"; chmod 640 "$lg"
+    (
+        exec 9>"$(lock_of "$u")"
+        if ! flock -n 9; then log "OCUPADO: ya hay una restauracion en curso para $u"; exit 1; fi
+        echo "== INICIO == $desc"; log "$desc"
+        if "$@"; then log "Completado sin errores."; echo "== FIN OK =="; else log "Termino con errores (ver arriba)."; echo "== FIN ERROR =="; fi
+    ) >>"$lg" 2>&1 </dev/null &
+    disown 2>/dev/null || true
+    python3 -c 'import json,sys; print(json.dumps({"ok":True,"started":True,"job":sys.argv[1]}, ensure_ascii=False))' "$desc"
+    exit 0
+}
+
+# ---------------------------------------------------------------- acciones ---
+cmd="${1:-}"; shift || true
+
+case "$cmd" in
+
+list)
+    u="${1:-}"; valid_user "$u" || json_err "usuario invalido"
+    tarjson=$(v-list-user-backups "$u" json 2>/dev/null) || tarjson="{}"
+    resticjson="[]"
+    if restic_ready "$u"; then resticjson=$(v-list-user-backups-restic "$u" json 2>/dev/null) || resticjson="[]"; fi
+    python3 - "$u" "$BACKUP_DIR" "$INDEX_DIR" "$tarjson" "$resticjson" "${BACKUP_SYSTEM:-local}" << 'PYEOF'
+import json, os, sys
+u, bdir, idir, tj, rj, bsys = sys.argv[1:7]
+out = []
+try: tars = json.loads(tj) if tj.strip() else {}
+except Exception: tars = {}
+for name, b in (tars or {}).items():
+    out.append({"id": name, "kind": "full", "size_mb": int(b.get("SIZE") or 0),
+        "date": b.get("DATE",""), "time": b.get("TIME",""), "runtime_min": b.get("RUNTIME",""),
+        "web": [x for x in (b.get("WEB") or "").split(",") if x], "mail": [x for x in (b.get("MAIL") or "").split(",") if x],
+        "dns": [x for x in (b.get("DNS") or "").split(",") if x], "db": [x for x in (b.get("DB") or "").split(",") if x],
+        "cron": b.get("CRON",""), "udir": [x for x in (b.get("UDIR") or "").split(",") if x],
+        "local": os.path.isfile(os.path.join(bdir, name)), "type": b.get("TYPE","")})
+try: snaps = json.loads(rj) if rj.strip() else []
+except Exception: snaps = []
+for s in (snaps or []):
+    t = (s.get("time") or "")[:19].replace("T"," ")
+    out.append({"id": s.get("short_id") or (s.get("id") or "")[:8], "kind": "incremental", "size_mb": None,
+        "date": t[:10], "time": t[11:], "runtime_min": "", "web": [], "mail": [], "dns": [], "db": [], "cron": "", "udir": [],
+        "local": True, "type": "restic", "paths": s.get("paths") or []})
+out.sort(key=lambda b: (b["date"], b["time"]), reverse=True)
+print(json.dumps({"ok": True, "backups": out, "restic": bool(snaps is not None and os.path.isfile(f"/usr/local/hestia/data/users/{u}/restic.conf")),
+    "backup_system": bsys}, ensure_ascii=False))
+PYEOF
+    ;;
+
+detail)
+    u="${1:-}"; b="${2:-}"; d="${3:-}"
+    valid_user "$u" || json_err "usuario invalido"
+    check_backup "$u" "$b"
+    [ -z "$d" ] || valid_domain "$d" || json_err "dominio invalido"
+    if [ "$MODE" = tar ]; then j=$(v-list-user-backup "$u" "$b" json 2>/dev/null); else j=$(v-list-user-backup-restic "$u" "$b" json 2>/dev/null); fi
+    [ -n "$j" ] || json_err "no se pudo leer la copia"
+    python3 - "$b" "$d" "$MODE" "$j" << 'PYEOF'
+import json, sys
+b, d, mode, j = sys.argv[1:5]
+data = json.loads(j); info = data.get(b) or (list(data.values())[0] if data else {})
+sp = lambda k: [x for x in (info.get(k) or "").split(",") if x]
+res = {"ok": True, "id": b, "kind": "full" if mode == "tar" else "incremental", "size_mb": int(info.get("SIZE") or 0),
+       "date": info.get("DATE",""), "time": info.get("TIME",""),
+       "web": sp("WEB"), "mail": sp("MAIL"), "dns": sp("DNS"), "db": sp("DB"), "udir": sp("UDIR"), "cron": info.get("CRON","")}
+if d:
+    res["domain"] = d
+    res["has_web"] = d in res["web"]; res["has_mail"] = d in res["mail"]; res["has_dns"] = d in res["dns"]
+print(json.dumps(res, ensure_ascii=False))
+PYEOF
+    ;;
+
+mail-accounts)
+    u="${1:-}"; b="${2:-}"; d="${3:-}"
+    valid_user "$u" || json_err "usuario invalido"; valid_domain "$d" || json_err "dominio invalido"
+    check_backup "$u" "$b"
+    if [ "$MODE" = tar ]; then
+        conf=$(tar_member "mail/$d/hestia/$d.conf")
+        [ -n "$conf" ] || json_err "la copia no contiene correo de $d"
+        echo "$conf" | python3 -c '
+import json, re, sys
+acc = []
+for line in sys.stdin:
+    m = re.search(r"ACCOUNT=\x27([^\x27]*)\x27", line)
+    if not m: continue
+    kv = dict(re.findall(r"(\w+)=\x27([^\x27]*)\x27", line))
+    acc.append({"account": kv.get("ACCOUNT",""), "quota": kv.get("QUOTA",""), "disk_mb": kv.get("U_DISK",""), "alias": kv.get("ALIAS",""), "fwd": kv.get("FWD","")})
+print(json.dumps({"ok": True, "accounts": acc}, ensure_ascii=False))'
+    else
+        v-list-user-files-restic "$u" "$b" "$HOMEDIR_BASE/$u/mail/$d" 2>/dev/null | python3 -c '
+import json, sys
+acc = []
+for line in sys.stdin:
+    line = line.strip()
+    if not line: continue
+    try: o = json.loads(line)
+    except Exception: continue
+    if o.get("struct_type") == "node" and o.get("type") == "dir" and not o.get("name","").startswith("."):
+        acc.append({"account": o["name"], "quota": "", "disk_mb": "", "alias": "", "fwd": ""})
+print(json.dumps({"ok": True, "accounts": acc}, ensure_ascii=False))'
+    fi
+    ;;
+
+files)
+    u="${1:-}"; b="${2:-}"; d="${3:-}"; sub="${4:-}"
+    valid_user "$u" || json_err "usuario invalido"; valid_domain "$d" || json_err "dominio invalido"
+    [ -z "$sub" ] || valid_relpath "$sub" || json_err "ruta invalida"
+    check_backup "$u" "$b"
+    if [ "$MODE" = tar ]; then
+        idx="$INDEX_DIR/$u.$b.$d.lst"
+        if [ ! -s "$idx" ]; then
+            # Sin indice: lo generamos en segundo plano (leer 18 GB tarda minutos) y el panel reintenta.
+            if [ -e "$idx.building" ]; then json_ok '{"building":true}'; fi
+            mkdir -p "$INDEX_DIR"; touch "$idx.building"
+            find_subtar "web/$d/domain_data.tar" || { rm -f "$idx.building"; json_err "la copia no contiene archivos web de $d"; }
+            ( tar_member "$MEMBER" | $DECOMP | tar -tvf - > "$idx.tmp" 2>/dev/null && mv "$idx.tmp" "$idx"; rm -f "$idx.building" ) >/dev/null 2>&1 </dev/null &
+            disown 2>/dev/null || true
+            json_ok '{"building":true}'
+        fi
+        python3 - "$idx" "$sub" << 'PYEOF'
+import json, sys, re
+idx, sub = sys.argv[1], sys.argv[2].strip("/")
+items = {}
+with open(idx, encoding="utf-8", errors="replace") as f:
+    for line in f:
+        parts = line.rstrip("\n").split(None, 5)
+        if len(parts) < 6: continue
+        perm, size, path = parts[0], parts[2], parts[5]
+        if " -> " in path: path = path.split(" -> ")[0]
+        path = re.sub(r"^\./", "", path).rstrip("/")
+        if not path or path == ".": continue
+        if sub:
+            if not path.startswith(sub + "/"): continue
+            rest = path[len(sub)+1:]
+        else:
+            rest = path
+        if "/" in rest: continue   # solo hijos directos
+        items[rest] = {"name": rest, "path": (sub + "/" + rest) if sub else rest, "dir": perm.startswith("d"), "size": 0 if perm.startswith("d") else int(size) if size.isdigit() else 0}
+lst = sorted(items.values(), key=lambda i: (not i["dir"], i["name"].lower()))
+print(json.dumps({"ok": True, "path": sub, "items": lst}, ensure_ascii=False))
+PYEOF
+    else
+        base="$HOMEDIR_BASE/$u/web/$d"; [ -n "$sub" ] && base="$base/$sub"
+        v-list-user-files-restic "$u" "$b" "$base" 2>/dev/null | python3 -c '
+import json, sys, os
+base = sys.argv[1]; sub = sys.argv[2].strip("/")
+items = []
+for line in sys.stdin:
+    line = line.strip()
+    if not line: continue
+    try: o = json.loads(line)
+    except Exception: continue
+    if o.get("struct_type") != "node": continue
+    p = o.get("path","")
+    if os.path.dirname(p.rstrip("/")) != base.rstrip("/"): continue   # solo hijos directos
+    items.append({"name": o.get("name",""), "path": (sub + "/" + o.get("name","")) if sub else o.get("name",""), "dir": o.get("type") == "dir", "size": int(o.get("size") or 0)})
+items.sort(key=lambda i: (not i["dir"], i["name"].lower()))
+print(json.dumps({"ok": True, "path": sub, "items": items}, ensure_ascii=False))' "$base" "$sub"
+    fi
+    ;;
+
+index)
+    u="${1:-}"; b="${2:-}"; d="${3:-}"
+    valid_user "$u" || json_err "usuario invalido"; valid_domain "$d" || json_err "dominio invalido"
+    check_backup "$u" "$b"
+    [ "$MODE" = tar ] || json_ok '{"building":false,"note":"restic no necesita indice"}'
+    idx="$INDEX_DIR/$u.$b.$d.lst"
+    [ -s "$idx" ] && json_ok '{"building":false,"ready":true}'
+    [ -e "$idx.building" ] && json_ok '{"building":true}'
+    find_subtar "web/$d/domain_data.tar" || json_err "la copia no contiene archivos web de $d"
+    mkdir -p "$INDEX_DIR"; touch "$idx.building"
+    ( tar_member "$MEMBER" | $DECOMP | tar -tvf - > "$idx.tmp" 2>/dev/null && mv "$idx.tmp" "$idx"; rm -f "$idx.building" ) >/dev/null 2>&1 </dev/null &
+    disown 2>/dev/null || true
+    json_ok '{"building":true}'
+    ;;
+
+status)
+    u="${1:-}"; valid_user "$u" || json_err "usuario invalido"
+    lg=$(user_log "$u"); running=false
+    if [ -e "$(lock_of "$u")" ] && ! flock -n "$(lock_of "$u")" true 2>/dev/null; then running=true; fi
+    python3 - "$lg" "$running" << 'PYEOF'
+import json, sys, os
+lg, running = sys.argv[1], sys.argv[2] == "true"
+lines = []
+if os.path.isfile(lg):
+    with open(lg, encoding="utf-8", errors="replace") as f:
+        lines = f.readlines()[-80:]
+# Solo el ultimo trabajo (desde el ultimo "== INICIO ==")
+last = 0
+for i, l in enumerate(lines):
+    if l.startswith("== INICIO =="): last = i
+lines = lines[last:]
+state = "running" if running else ("ok" if any(l.startswith("== FIN OK") for l in lines) else ("error" if any(l.startswith("== FIN ERROR") for l in lines) else "idle"))
+print(json.dumps({"ok": True, "running": running, "state": state, "log": "".join(lines)[-6000:]}, ensure_ascii=False))
+PYEOF
+    ;;
+
+restore)
+    u="${1:-}"; b="${2:-}"; shift 2 || true
+    valid_user "$u" || json_err "usuario invalido"
+    check_backup "$u" "$b"
+    web="no"; dns="no"; mail="no"; db="no"; notify="no"
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --web)  web="${2:-no}"; shift 2 ;;
+            --dns)  dns="${2:-no}"; shift 2 ;;
+            --mail) mail="${2:-no}"; shift 2 ;;
+            --db)   db="${2:-no}"; shift 2 ;;
+            --notify) notify="${2:-no}"; shift 2 ;;
+            *) json_err "opcion desconocida $1" ;;
+        esac
+    done
+    for v in "$web" "$dns" "$mail" "$db"; do
+        [ "$v" = "no" ] || [ "$v" = "*" ] || echo "$v" | grep -qE '^[a-zA-Z0-9._,-]{1,600}$' || json_err "lista de objetos invalida"
+    done
+    [ "$web$dns$mail$db" != "nononono" ] || json_err "no se ha seleccionado nada"
+    [ "$notify" = "yes" ] || notify="no"
+    do_restore() {
+        if [ "$MODE" = tar ]; then
+            nice -n 19 ionice -c 3 v-restore-user "$u" "$b" "$web" "$dns" "$mail" "$db" no no "$notify"
+        else
+            nice -n 19 ionice -c 3 v-restore-user-restic "$u" "$b" "$web" "$dns" "$mail" "$db" no no
+        fi
+    }
+    run_bg "$u" "Restaurar objetos de $b (web=$web dns=$dns mail=$mail db=$db)" do_restore
+    ;;
+
+restore-mail-account)
+    u="${1:-}"; b="${2:-}"; d="${3:-}"; accs="${4:-}"; how="${5:-merge}"
+    valid_user "$u" || json_err "usuario invalido"; valid_domain "$d" || json_err "dominio invalido"
+    check_backup "$u" "$b"
+    [ "$how" = merge ] || [ "$how" = folder ] || json_err "modo invalido (merge|folder)"
+    IFS=',' read -r -a ACCS <<< "$accs"
+    [ ${#ACCS[@]} -gt 0 ] || json_err "sin cuentas"
+    for a in "${ACCS[@]}"; do valid_account "$a" || json_err "cuenta invalida: $a"; done
+    do_restore_mail() {
+        local maildir="$HOMEDIR_BASE/$u/mail/$d"
+        if [ ! -d "$maildir" ] && command -v idn2 >/dev/null 2>&1; then maildir="$HOMEDIR_BASE/$u/mail/$(idn2 --quiet -a "$d" 2>/dev/null || echo "$d")"; fi
+        local stamp; stamp=$(date +%Y%m%d-%H%M)
+        local tmp; tmp=$(mktemp -d "$BACKUP_DIR/tmp.elurk.XXXXXX") || return 1
+        chmod 700 "$tmp"
+        local bconf
+        # 1) Datos de los buzones al directorio temporal
+        if [ "$MODE" = tar ]; then
+            find_subtar "mail/$d/accounts.tar" || { log "la copia no contiene buzones de $d"; rm -rf "$tmp"; return 1; }
+            log "Extrayendo ${ACCS[*]} de $MEMBER ..."
+            tar_member "$MEMBER" | $DECOMP | tar -xpf - -C "$tmp" -- "${ACCS[@]}" 2>&1 | grep -v "Not found in archive" || true
+            bconf=$(tar_member "mail/$d/hestia/$d.conf")
+        else
+            local rc; rc=$(restic_cmd "$u")
+            for a in "${ACCS[@]}"; do
+                log "restic restore $a ..."
+                $rc restore "$b" --include "$HOMEDIR_BASE/$u/mail/$d/$a" --target "$tmp/_r" >/dev/null || return 1
+                mkdir -p "$tmp/$a"; [ -d "$tmp/_r$HOMEDIR_BASE/$u/mail/$d/$a" ] && cp -a "$tmp/_r$HOMEDIR_BASE/$u/mail/$d/$a/." "$tmp/$a/"
+            done
+            rm -rf "$tmp/_r"
+            bconf=$($rc dump "$b" "$HOMEDIR_BASE/$u/backup/mail/$d/hestia/$d.conf" 2>/dev/null || true)
+        fi
+        # 2) El dominio de correo tiene que existir en Hestia
+        if ! grep -q "DOMAIN='$d'" "$HESTIA/data/users/$u/mail.conf" 2>/dev/null; then
+            log "El dominio de correo $d no existe ahora en Hestia: restaura primero el dominio de correo (objeto completo)."; rm -rf "$tmp"; return 1
+        fi
+        mkdir -p "$maildir"
+        local changed_conf=0
+        for a in "${ACCS[@]}"; do
+            if [ ! -d "$tmp/$a" ]; then log "AVISO: $a no estaba en la copia; se omite"; continue; fi
+            # 3) Si la cuenta ya no existe, recrearla con su config de la copia (contraseña, alias, cuota)
+            if ! grep -q "ACCOUNT='$a'" "$HESTIA/data/users/$u/mail/$d.conf" 2>/dev/null; then
+                local line; line=$(echo "$bconf" | grep "ACCOUNT='$a'" | head -1)
+                if [ -n "$line" ]; then
+                    echo "$line" >> "$HESTIA/data/users/$u/mail/$d.conf"; changed_conf=1
+                    log "Cuenta $a@$d recreada en la configuracion (desde la copia)."
+                else
+                    log "AVISO: $a no existe y la copia no trae su configuracion; se restauran solo los datos."
+                fi
+            fi
+            mkdir -p "$maildir/$a"
+            if [ "$how" = merge ]; then
+                log "Fusionando correo de $a en su buzon (no se borra nada actual)..."
+                rsync -a --exclude 'dovecot*' --exclude 'maildirsize' "$tmp/$a/" "$maildir/$a/" || return 1
+            else
+                # Carpeta RESTAURADO-<fecha> dentro del buzon (Maildir++: subcarpeta = .Nombre)
+                local dest="$maildir/$a/.RESTAURADO-$stamp"
+                log "Dejando el correo de $a en la carpeta RESTAURADO-$stamp ..."
+                mkdir -p "$dest"
+                for sub in cur new tmp; do [ -d "$tmp/$a/$sub" ] && { mkdir -p "$dest/$sub"; rsync -a "$tmp/$a/$sub/" "$dest/$sub/"; }; done
+                mkdir -p "$dest/cur" "$dest/new" "$dest/tmp"
+                echo "RESTAURADO-$stamp" >> "$maildir/$a/subscriptions"
+                for sd in "$tmp/$a"/.[!.]*; do
+                    [ -d "$sd" ] || continue
+                    local sn; sn=$(basename "$sd"); sn="${sn#.}"
+                    rsync -a --exclude 'dovecot*' --exclude 'maildirsize' "$sd/" "$maildir/$a/.RESTAURADO-$stamp.$sn/"
+                    echo "RESTAURADO-$stamp.$sn" >> "$maildir/$a/subscriptions"
+                done
+                sort -u "$maildir/$a/subscriptions" -o "$maildir/$a/subscriptions"
+            fi
+            chown -R "$u":mail "$maildir/$a"
+            # Dovecot recalcula el indice/cuota al abrir el buzon; forzamos borrando el cache de indices
+            rm -f "$maildir/$a/dovecot.index.cache" "$maildir/$a/maildirsize" 2>/dev/null
+        done
+        rm -rf "$tmp"
+        if [ "$changed_conf" = 1 ]; then log "Reconstruyendo dominio de correo..."; v-rebuild-mail-domain "$u" "$d" yes >/dev/null 2>&1 || log "AVISO: v-rebuild-mail-domain devolvio error"; fi
+        v-update-user-counters "$u" >/dev/null 2>&1 || true
+        return 0
+    }
+    run_bg "$u" "Restaurar buzones $accs de $d desde $b ($how)" do_restore_mail
+    ;;
+
+restore-files)
+    u="${1:-}"; b="${2:-}"; d="${3:-}"; paths="${4:-}"
+    valid_user "$u" || json_err "usuario invalido"; valid_domain "$d" || json_err "dominio invalido"
+    check_backup "$u" "$b"
+    IFS=',' read -r -a PATHS <<< "$paths"
+    [ ${#PATHS[@]} -gt 0 ] || json_err "sin rutas"
+    for p in "${PATHS[@]}"; do valid_relpath "$p" || json_err "ruta invalida: $p"; done
+    do_restore_files() {
+        local webdir="$HOMEDIR_BASE/$u/web/$d"
+        [ -d "$webdir" ] || { log "El dominio $d no existe ahora en Hestia; restaura el dominio completo."; return 1; }
+        local tmp; tmp=$(mktemp -d "$BACKUP_DIR/tmp.elurk.XXXXXX") || return 1
+        chmod 700 "$tmp"
+        if [ "$MODE" = tar ]; then
+            find_subtar "web/$d/domain_data.tar" || { log "la copia no contiene archivos web de $d"; rm -rf "$tmp"; return 1; }
+            local members=(); for p in "${PATHS[@]}"; do members+=("./$p"); done
+            log "Extrayendo ${#PATHS[@]} ruta(s) de $MEMBER (lee toda la copia del sitio, paciencia)..."
+            tar_member "$MEMBER" | $DECOMP | tar -xpf - -C "$tmp" -- "${members[@]}" 2>&1 | grep -v "Not found in archive" || true
+        else
+            local rc; rc=$(restic_cmd "$u")
+            for p in "${PATHS[@]}"; do
+                log "restic restore $p ..."
+                $rc restore "$b" --include "$webdir/$p" --target "$tmp/_r" >/dev/null || return 1
+            done
+            [ -d "$tmp/_r$webdir" ] && cp -a "$tmp/_r$webdir/." "$tmp/"; rm -rf "$tmp/_r"
+        fi
+        local n=0
+        for p in "${PATHS[@]}"; do
+            if [ -e "$tmp/$p" ]; then
+                mkdir -p "$(dirname "$webdir/$p")"
+                rsync -a "$tmp/$p" "$(dirname "$webdir/$p")/" && n=$((n+1)) && log "Restaurado: $p"
+                chown -R "$u":"$u" "$webdir/$p" 2>/dev/null
+            else
+                log "AVISO: no estaba en la copia: $p"
+            fi
+        done
+        rm -rf "$tmp"
+        log "$n ruta(s) restaurada(s) en $webdir"
+        [ "$n" -gt 0 ]
+    }
+    run_bg "$u" "Restaurar archivos de $d desde $b" do_restore_files
+    ;;
+
+restore-config)
+    u="${1:-}"; b="${2:-}"; d="${3:-}"; what="${4:-}"
+    valid_user "$u" || json_err "usuario invalido"; valid_domain "$d" || json_err "dominio invalido"
+    check_backup "$u" "$b"
+    case "$what" in web|mail|dns) : ;; *) json_err "tipo invalido (web|mail|dns)" ;; esac
+    UD="$HESTIA/data/users/$u"
+    grep -q "DOMAIN='$d'" "$UD/$what.conf" 2>/dev/null || json_err "el dominio $what $d no existe ahora en Hestia: usa la restauracion completa del objeto"
+    getconf() {  # ruta relativa dentro de la copia (p.ej. web/DOM/hestia/web.conf)
+        if [ "$MODE" = tar ]; then tar_member "$1"; else $(restic_cmd "$u") dump "$b" "$HOMEDIR_BASE/$u/backup/$1" 2>/dev/null; fi
+    }
+    line=$(getconf "$what/$d/hestia/$what.conf" | grep "DOMAIN='$d'" | head -1)
+    [ -n "$line" ] || json_err "la copia no contiene configuracion $what de $d"
+    stamp=$(date +%Y%m%d-%H%M%S); mkdir -p "$CONF_BAK_DIR"; chmod 700 "$CONF_BAK_DIR"
+    cp -a "$UD/$what.conf" "$CONF_BAK_DIR/$u.$what.conf.$stamp"
+    # Sustituir la linea del dominio por la de la copia (python: sin sorpresas con sed y las comillas)
+    python3 - "$UD/$what.conf" "$d" "$line" << 'PYEOF'
+import sys
+f, d, new = sys.argv[1:4]
+lines = open(f, encoding="utf-8", errors="replace").read().splitlines()
+out = [new if f"DOMAIN='{d}'" in l else l for l in lines]
+open(f, "w", encoding="utf-8").write("\n".join(out) + "\n")
+PYEOF
+    extra=""
+    if [ "$what" = mail ] || [ "$what" = dns ]; then
+        sub=$(getconf "$what/$d/hestia/$d.conf")
+        if [ -n "$sub" ]; then
+            [ -f "$UD/$what/$d.conf" ] && cp -a "$UD/$what/$d.conf" "$CONF_BAK_DIR/$u.$what.$d.conf.$stamp"
+            mkdir -p "$UD/$what"; printf '%s\n' "$sub" > "$UD/$what/$d.conf"; chmod 660 "$UD/$what/$d.conf"
+            extra=" + $( [ "$what" = mail ] && echo cuentas || echo registros )"
+        fi
+    fi
+    case "$what" in
+        web)  v-rebuild-web-domain "$u" "$d" yes >/dev/null 2>&1 || json_err "config aplicada pero v-rebuild-web-domain fallo (revisa /var/log/hestia)" ;;
+        mail) v-rebuild-mail-domain "$u" "$d" yes >/dev/null 2>&1 || json_err "config aplicada pero v-rebuild-mail-domain fallo" ;;
+        dns)  v-rebuild-dns-domain "$u" "$d" yes >/dev/null 2>&1 || json_err "config aplicada pero v-rebuild-dns-domain fallo" ;;
+    esac
+    python3 -c 'import json,sys; print(json.dumps({"ok":True,"summary":sys.argv[1]}, ensure_ascii=False))' "Configuracion $what de $d restaurada$extra. Copia previa en $CONF_BAK_DIR ($stamp)."
+    ;;
+
+hosts)
+    j=$(v-list-backup-host json 2>/dev/null) || j="{}"
+    r="{}"; [ -f "$HESTIA/conf/restic.conf" ] && r=$(v-list-backup-host-restic json 2>/dev/null || echo "{}")
+    python3 - "$j" "$r" "${BACKUP_SYSTEM:-local}" "${BACKUP_MODE:-}" << 'PYEOF'
+import json, sys
+j, r, bs, bm = sys.argv[1:5]
+def ld(s):
+    try: return json.loads(s) if s.strip() else {}
+    except Exception: return {}
+print(json.dumps({"ok": True, "backup_system": bs, "compression": bm, "hosts": ld(j), "restic": ld(r)}, ensure_ascii=False))
+PYEOF
+    ;;
+
+*)
+    json_err "subcomando desconocido"
+    ;;
+esac

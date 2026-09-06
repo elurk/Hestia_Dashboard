@@ -38,9 +38,13 @@ Leyenda: ✅ nativo Hestia · 🔶 construible (mapeo/custom) · ⚠️ parcial 
 - Asociar BD ↔ dominio — 🔒 (Hestia asocia BD al USUARIO, no al dominio → mapeo)
 
 ## Copias de seguridad
-- Backup y restauración por suscripción — ✅ (Hestia backups por usuario)
-- Backup a destino remoto (SFTP/S3/B2) — ✅
-- Programación de backups — ✅
+- Backup y restauración por suscripción — ✅ (Hestia backups por usuario; 1 cliente = 1 usuario)
+- Backup a destino remoto (SFTP/S3/B2) — ✅ · **FTPS** — ✅ vía remoto rclone (el FTP nativo de Hestia es plano)
+- Programación de backups — ✅ · Incrementales — ✅ (restic, por paquete)
+- Restaurar objetos sueltos con doble lista (web/correo/DNS/BBDD) — ✅ nativo + pestaña Copias del fork
+- Restaurar un **buzón** suelto — ✅ construido en el fork (`v-elurk-backup restore-mail-account`)
+- Restaurar **archivos** sueltos — ✅ construido en el fork (índice del tar o `restic ls`)
+- Restaurar **solo configuración** — ✅ construido en el fork (`restore-config web|mail|dns`)
 
 ## WordPress (WP Toolkit)
 - Instalar WP (Quick Install) — ✅

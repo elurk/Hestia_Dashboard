@@ -530,7 +530,7 @@ $__dom = "";
 foreach (["from", "domain"] as $__k) {
 	if (!empty($_GET[$__k]) && preg_match('/^[a-z0-9.-]{1,253}$/i', $_GET[$__k])) { $__dom = $_GET[$__k]; break; }
 }
-$__tabs = ["info" => "Panel de información", "hosting" => "Hosting y DNS", "mail" => "Correo", "files" => "Archivos", "db" => "Bases de datos", "wp" => "WordPress"];
+$__tabs = ["info" => "Panel de información", "hosting" => "Hosting y DNS", "mail" => "Correo", "files" => "Archivos", "db" => "Bases de datos", "wp" => "WordPress", "backup" => "Copias"];
 $__tab = (!empty($_GET["tab"]) && isset($__tabs[$_GET["tab"]])) ? $_GET["tab"] : "";
 $__pages = ["/edit/mail/" => "Editar correo", "/add/mail/" => "Nueva cuenta de correo", "/edit/db/" => "Editar base de datos", "/add/db/" => "Nueva base de datos", "/edit/web/" => "Editar dominio web", "/add/web/" => "Nuevo dominio", "/list/dns/" => "Zona DNS", "/edit/dns/" => "Editar DNS", "/add/dns/" => "Nuevo registro DNS", "/list/backup/" => "Copias de seguridad", "/list/cron/" => "Tareas programadas", "/list/stats/" => "Estadísticas", "/list/log/" => "Registros", "/list/security/" => "Seguridad", "/list/wp/" => "WordPress", "/list/user/" => "Usuarios", "/edit/user/" => "Editar usuario", "/add/user/" => "Nuevo usuario", "/list/web/" => "Dominios web", "/list/mail/" => "Correo", "/list/db/" => "Bases de datos"];
 $__isDomainView = (strpos($__path, "/list/domain/") === 0);

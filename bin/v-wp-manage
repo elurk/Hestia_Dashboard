@@ -6,6 +6,15 @@
 #   harden <user> <domain>  -> hestia-wp-harden sobre ese sitio
 #   scan   <user> <domain>  -> hestia-wp-harden --scan sobre ese sitio
 #
+# Toolkit completo (delegado a hestia-wp-toolkit, python3, tras validar argumentos):
+#   status <user> <domain> [--refresh]
+#   apply|revert <user> <domain> <medida,medida|all>
+#   update <user> <domain> core|plugin|theme <slug|all>
+#   deactivate <user> <domain> <slug>
+#   toggle <user> <domain> debug|maintenance|indexing|cache|wpcron|httpauth on|off [authuser authpass]
+#   wpcli-install <user>
+#   vulns-refresh <user> <domain>
+#
 # Deteccion como root evita los problemas de permisos de hestiaweb sobre los
 # directorios /home de otros usuarios.
 
@@ -13,6 +22,7 @@ set -u
 # sudo resetea PATH (secure_path) y deja fuera los comandos v-* de Hestia.
 export PATH="/usr/local/hestia/bin:$PATH"
 HARDEN_BIN="/usr/local/hestia/bin/hestia-wp-harden"
+TOOLKIT_BIN="/usr/local/hestia/bin/hestia-wp-toolkit"
 
 json_err() { echo "{\"ok\":false,\"error\":\"$1\"}"; exit 0; }
 valid_name() { echo "$1" | grep -qE '^[a-zA-Z0-9._-]{1,64}$'; }
@@ -66,6 +76,32 @@ PYEOF
             [ "$ok" = true ] && echo "{\"ok\":true,\"summary\":\"$summary\"}" || echo "{\"ok\":false,\"error\":\"$summary\"}"
         fi
         rm -f "$out_file"
+        ;;
+    status|apply|revert|update|deactivate|toggle|vulns-refresh)
+        u="${2:-}"; d="${3:-}"
+        valid_name "$u" || json_err "usuario invalido"
+        echo "$d" | grep -qE '^[a-zA-Z0-9.-]{1,253}$' || json_err "dominio invalido"
+        [ -x "$TOOLKIT_BIN" ] || json_err "falta hestia-wp-toolkit"
+        a4="${4:-}"; a5="${5:-}"; a6="${6:-}"; a7="${7:-}"
+        case "$cmd" in
+            status)        [ -z "$a4" ] || [ "$a4" = "--refresh" ] || json_err "opcion invalida" ;;
+            apply|revert)  echo "$a4" | grep -qE '^([a-z_]{1,32}(,[a-z_]{1,32})*|all)$' || json_err "medidas invalidas" ;;
+            update)        echo "$a4" | grep -qE '^(core|plugin|theme)$' || json_err "tipo invalido"
+                           echo "$a5" | grep -qE '^([a-zA-Z0-9._-]{1,100}|all)$' || json_err "slug invalido" ;;
+            deactivate)    echo "$a4" | grep -qE '^[a-zA-Z0-9._-]{1,100}$' || json_err "slug invalido" ;;
+            toggle)        echo "$a4" | grep -qE '^(debug|maintenance|indexing|cache|wpcron|httpauth)$' || json_err "herramienta invalida"
+                           echo "$a5" | grep -qE '^(on|off)$' || json_err "estado invalido"
+                           [ -z "$a6" ] || echo "$a6" | grep -qE '^[a-zA-Z0-9._-]{1,32}$' || json_err "usuario http invalido"
+                           [ ${#a7} -le 128 ] || json_err "contrasena demasiado larga" ;;
+            vulns-refresh) : ;;
+        esac
+        # Los argumentos ya validados se pasan tal cual (la contrasena http no se toca).
+        exec "$TOOLKIT_BIN" "$cmd" "$u" "$d" "${@:4}"
+        ;;
+    wpcli-install)
+        u="${2:-}"; valid_name "$u" || json_err "usuario invalido"
+        [ -x "$TOOLKIT_BIN" ] || json_err "falta hestia-wp-toolkit"
+        exec "$TOOLKIT_BIN" wpcli-install "$u"
         ;;
     *)
         json_err "subcomando desconocido"

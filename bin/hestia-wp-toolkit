@@ -1,0 +1,703 @@
+#!/usr/bin/env python3
+# hestia-wp-toolkit  -  Motor del "WordPress Toolkit" soberano para HestiaCP.
+#
+# Lo invoca v-wp-manage (root via sudo) ya con los argumentos validados. Todo local:
+#   - Datos del sitio: WP-CLI ejecutado SIEMPRE como el usuario del sitio (nunca root).
+#   - Vulnerabilidades: API publica de wpvulnerability.net (sin clave; solo se envia el
+#     slug del plugin/tema y la version del core, nunca datos del sitio). Cache 24 h.
+#   - Medidas de seguridad: comprobaciones sobre archivos, wp-config.php y reglas del
+#     servidor web (include nginx por dominio + bloque en .htaccess), reversibles.
+#
+# Subcomandos (salida JSON):
+#   status  USER DOMAIN [--refresh]        estado completo (cache 10 min)
+#   apply   USER DOMAIN m1,m2|all          aplicar medidas
+#   revert  USER DOMAIN m1,m2              revertir medidas reversibles
+#   update  USER DOMAIN core|plugin|theme SLUG|all
+#   deactivate USER DOMAIN SLUG
+#   toggle  USER DOMAIN debug|maintenance|indexing|cache|wpcron|httpauth on|off [AUTHUSER AUTHPASS]
+#   wpcli-install USER
+#   vulns-refresh USER DOMAIN              vaciar cache de vulnerabilidades del sitio
+
+import json, os, pwd, grp, re, subprocess, sys, time, secrets, shutil, stat, urllib.request
+
+HESTIA = "/usr/local/hestia"
+BIN = HESTIA + "/bin"
+DATA = HESTIA + "/data/elurk/wpt"
+VULN_API = "https://www.wpvulnerability.net"
+STATUS_TTL = 600
+VULN_TTL = 86400
+MARK = "ELURK-WPT"
+
+os.environ["PATH"] = BIN + ":/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"   # nginx vive en /usr/sbin
+
+def out(d):
+    print(json.dumps(d, ensure_ascii=False)); sys.exit(0)
+def fail(msg, **kw):
+    d = {"ok": False, "error": msg}; d.update(kw); out(d)
+
+def sh(cmd, timeout=180, check=False):
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return 124, "", "timeout"
+    except FileNotFoundError as e:
+        return 127, "", str(e)
+    return r.returncode, r.stdout, r.stderr
+
+def hestia_conf():
+    conf = {}
+    try:
+        for line in open(HESTIA + "/conf/hestia.conf"):
+            m = re.match(r"(\w+)='(.*)'", line.strip())
+            if m: conf[m.group(1)] = m.group(2)
+    except OSError: pass
+    return conf
+
+def hst_json(args):
+    rc, o, _ = sh([BIN + "/" + args[0]] + args[1:] + ["json"], timeout=60)
+    if rc != 0: return {}
+    try: return json.loads(o or "{}")
+    except ValueError: return {}
+
+# ------------------------------------------------------------------ sitio ----
+class Site:
+    def __init__(self, user, domain):
+        if not re.fullmatch(r"[a-zA-Z0-9_-]{1,32}", user) or not os.path.isdir(f"{HESTIA}/data/users/{user}"):
+            fail("usuario invalido")
+        if not re.fullmatch(r"[a-zA-Z0-9.-]{1,253}", domain) or ".." in domain:
+            fail("dominio invalido")
+        self.user, self.domain = user, domain
+        try: self.pw = pwd.getpwnam(user)
+        except KeyError: fail("el usuario no existe en el sistema")
+        self.conf = hestia_conf()
+        self.web = hst_json(["v-list-web-domain", user, domain]).get(domain) or {}
+        if not self.web: fail("el dominio web no existe para este usuario")
+        docroot = self.web.get("DOCUMENT_ROOT") or f"/home/{user}/web/{domain}/public_html"
+        docroot = os.path.realpath(docroot)
+        if not docroot.startswith(f"/home/{user}/web/"):
+            fail("docroot fuera de /home/USER/web")
+        self.docroot = docroot
+        self.wpconfig = self.find_wpconfig()
+        self.is_wp = bool(self.wpconfig) and os.path.isdir(docroot + "/wp-includes")
+        self.confdir = f"/home/{user}/conf/web/{domain}"
+        self.wp = self.find_wp()
+        self.web_system = self.conf.get("WEB_SYSTEM", "")
+        self.proxy_system = self.conf.get("PROXY_SYSTEM", "")
+        self.has_nginx = "nginx" in (self.web_system, self.proxy_system)
+        self.has_apache = self.web_system == "apache2"
+        m = re.search(r"PHP-?(\d+)[_.-](\d+)", self.web.get("BACKEND", ""))
+        self.php = f"{m.group(1)}.{m.group(2)}" if m else ""
+
+    def find_wpconfig(self):
+        for c in (self.docroot + "/wp-config.php", os.path.dirname(self.docroot) + "/wp-config.php"):
+            if os.path.isfile(c): return c
+        return ""
+
+    def find_wp(self):
+        for c in (f"/home/{self.user}/.wp-cli/wp", "/usr/local/bin/wp", "/usr/bin/wp"):
+            if os.access(c, os.X_OK): return c
+        return ""
+
+    def run_wp(self, args, timeout=180, skip=True):
+        """WP-CLI como el usuario del sitio. Devuelve (rc, stdout, stderr)."""
+        if not self.wp: return 127, "", "WP-CLI no instalado"
+        cmd = ["sudo", "-u", self.user, "-H", self.wp, f"--path={self.docroot}", "--no-color"]
+        if skip: cmd += ["--skip-plugins", "--skip-themes"]
+        return sh(cmd + args, timeout=timeout)
+
+    def wp_json(self, args):
+        rc, o, e = self.run_wp(args + ["--format=json"])
+        if rc != 0: return None
+        try: return json.loads(o or "null")
+        except ValueError: return None
+
+    def chown_user(self, path, mode=None):
+        try:
+            os.chown(path, self.pw.pw_uid, self.pw.pw_gid)
+            if mode is not None: os.chmod(path, mode)
+        except OSError: pass
+
+    def write_as_user(self, path, content, mode=0o644):
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        tmp = path + ".elurk-tmp"
+        with open(tmp, "w", encoding="utf-8") as f: f.write(content)
+        os.replace(tmp, path)
+        self.chown_user(path, mode)
+        self.chown_user(os.path.dirname(path))
+
+# ---------------------------------------------------------- wp-config.php ----
+DEF_RE = r"^[ \t]*define\(\s*['\"]{name}['\"]\s*,\s*(.+?)\s*\)\s*;.*$"
+
+def cfg_get(site, name):
+    """Valor de una constante ('true','false','...') o None si no esta definida."""
+    if not site.wpconfig: return None
+    txt = open(site.wpconfig, encoding="utf-8", errors="replace").read()
+    m = re.search(DEF_RE.format(name=re.escape(name)), txt, re.M)
+    return m.group(1).strip().strip("'\"").lower() if m else None
+
+def cfg_write(site, txt):
+    st = os.stat(site.wpconfig)
+    tmp = site.wpconfig + ".elurk-tmp"
+    with open(tmp, "w", encoding="utf-8") as f: f.write(txt)
+    os.replace(tmp, site.wpconfig)
+    os.chown(site.wpconfig, st.st_uid, st.st_gid); os.chmod(site.wpconfig, stat.S_IMODE(st.st_mode))
+
+def cfg_set(site, name, value):
+    """define('NAME', value); -> sustituye si existe, si no la inserta antes de 'stop editing'."""
+    txt = open(site.wpconfig, encoding="utf-8", errors="replace").read()
+    line = f"define('{name}', {value}); // {MARK}"
+    pat = re.compile(DEF_RE.format(name=re.escape(name)), re.M)
+    if pat.search(txt):
+        txt = pat.sub(line, txt, count=1)
+    else:
+        anchor = re.search(r"^.*(stop editing|Happy publishing|Eso es todo|dejar de editar).*$", txt, re.M | re.I)
+        if anchor:
+            txt = txt[:anchor.start()] + line + "\n" + txt[anchor.start():]
+        else:
+            anchor = re.search(r"^.*require_once.*ABSPATH.*$", txt, re.M)
+            if anchor: txt = txt[:anchor.start()] + line + "\n" + txt[anchor.start():]
+            else: txt = re.sub(r"^<\?php\s*\n?", "<?php\n" + line + "\n", txt, count=1)
+    cfg_write(site, txt)
+
+def cfg_del(site, name):
+    txt = open(site.wpconfig, encoding="utf-8", errors="replace").read()
+    new = re.sub(DEF_RE.format(name=re.escape(name)) + r"\n?", "", txt, flags=re.M)
+    if new != txt: cfg_write(site, new)
+
+# -------------------------------------------------------------- mu-plugin ----
+MU_PLUGIN = r'''<?php
+/**
+ * Plugin Name: Elurk WP Toolkit (mu)
+ * Description: Medidas de seguridad y herramientas activadas por constantes en wp-config.php. Gestionado desde el panel; no editar.
+ * Version: 1.0
+ */
+if (!defined('ABSPATH')) { exit; }
+
+// --- Pingbacks desactivados ---
+if (defined('ELURK_WPT_PINGBACKS_OFF') && ELURK_WPT_PINGBACKS_OFF) {
+    add_filter('xmlrpc_methods', function ($m) { unset($m['pingback.ping'], $m['pingback.extensions.getPingbacks']); return $m; });
+    add_filter('wp_headers', function ($h) { unset($h['X-Pingback']); return $h; });
+    add_filter('pings_open', '__return_false', 20, 2);
+    add_filter('pre_ping', function (&$links) { $links = array(); });
+}
+
+// --- Bloqueo de escaneo de autores (?author=N) ---
+if (defined('ELURK_WPT_AUTHOR_SCANS_OFF') && ELURK_WPT_AUTHOR_SCANS_OFF) {
+    add_action('init', function () {
+        if (!is_admin() && isset($_GET['author']) && (is_numeric($_GET['author']) || preg_match('/^\d+/', (string) $_GET['author']))) {
+            status_header(403); nocache_headers(); exit('Forbidden');
+        }
+    }, 1);
+    add_filter('rest_endpoints', function ($e) {
+        if (!is_user_logged_in()) { unset($e['/wp/v2/users'], $e['/wp/v2/users/(?P<id>[\d]+)']); }
+        return $e;
+    });
+}
+
+// --- Modo mantenimiento (503, solo visitantes) ---
+if (defined('ELURK_WPT_MAINTENANCE') && ELURK_WPT_MAINTENANCE) {
+    add_action('template_redirect', function () {
+        if (is_user_logged_in() && current_user_can('edit_posts')) { return; }
+        if (defined('DOING_CRON') || defined('WP_CLI') || (defined('REST_REQUEST') && REST_REQUEST)) { return; }
+        $uri = isset($_SERVER['REQUEST_URI']) ? $_SERVER['REQUEST_URI'] : '';
+        if (strpos($uri, 'wp-login.php') !== false || strpos($uri, '/wp-admin') !== false) { return; }
+        status_header(503); nocache_headers(); header('Retry-After: 3600');
+        echo '<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>En mantenimiento</title>'
+           . '<style>body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#F4F6F8;color:#212529;display:flex;min-height:100vh;align-items:center;justify-content:center}'
+           . '.c{text-align:center;padding:2rem;max-width:520px}h1{font-weight:600;font-size:1.6rem;margin:0 0 .5rem}p{color:#6B7A88;margin:0}</style></head>'
+           . '<body><div class="c"><h1>Sitio en mantenimiento</h1><p>Estamos haciendo mejoras. Vuelve en unos minutos.</p></div></body></html>';
+        exit;
+    }, 0);
+}
+'''
+
+def mu_path(site): return site.docroot + "/wp-content/mu-plugins/elurk-wp-toolkit.php"
+def mu_ensure(site):
+    p = mu_path(site)
+    if not os.path.isfile(p) or open(p, encoding="utf-8", errors="replace").read() != MU_PLUGIN:
+        site.write_as_user(p, MU_PLUGIN)
+def mu_cleanup_if_unused(site):
+    if not any(cfg_get(site, c) == "true" for c in ("ELURK_WPT_PINGBACKS_OFF", "ELURK_WPT_AUTHOR_SCANS_OFF", "ELURK_WPT_MAINTENANCE")):
+        try: os.remove(mu_path(site))
+        except OSError: pass
+
+# ----------------------------------------------------- reglas del servidor ----
+# Cada medida de servidor genera su bloque nginx (include por dominio) y su bloque Apache
+# (.htaccess). Se regeneran completos a partir del conjunto de medidas activas, que se
+# lee de los marcadores "# measure:ID" del propio include (sin estado aparte).
+SERVER_MEASURES = ["xmlrpc", "wp_config_block", "php_uploads", "php_wp_includes", "php_cache_dirs",
+                   "dir_browsing", "unused_lang", "sensitive_files", "potentially_sensitive", "htaccess_block", "bot_protection"]
+BAD_BOTS = "acunetix|nikto|sqlmap|masscan|nmap|wpscan|dirbuster|netsparker|nessus|zgrab|python-requests|libwww-perl|go-http-client|MJ12bot|AhrefsBot|SemrushBot|DotBot"
+
+def nginx_block(site, m):
+    d = site.docroot
+    if m == "xmlrpc": return "location = /xmlrpc.php { deny all; return 403; }"
+    if m == "wp_config_block": return "location = /wp-config.php { deny all; return 404; }"
+    if m in ("php_uploads", "php_wp_includes", "php_cache_dirs"):
+        path = {"php_uploads": "/wp-content/uploads/", "php_wp_includes": "/wp-includes/", "php_cache_dirs": "/wp-content/cache/"}[m]
+        return (f"location ^~ {path} {{ root {d}; location ~ \\.php$ {{ deny all; return 403; }} "
+                f"try_files $uri =404; expires max; access_log off; }}")
+    if m == "dir_browsing": return "autoindex off;"
+    if m == "unused_lang": return "location ~* \\.(pl|py|jsp|asp|aspx|sh|cgi|rb)$ { deny all; return 403; }"
+    if m == "sensitive_files":
+        return "\n".join(f"location = /{f} {{ deny all; return 404; }}" for f in ("readme.html", "readme.txt", "license.txt", "wp-config-sample.php", "wp-admin/install.php", "wp-admin/upgrade.php"))
+    if m == "potentially_sensitive": return "location ~* \\.(log|sql|bak|old|orig|save|swp|swo|dist|conf)$ { deny all; return 404; }"
+    if m == "htaccess_block": return "location ~ /\\.(ht|user\\.ini) { deny all; return 404; }"
+    if m == "bot_protection": return f"if ($http_user_agent ~* ({BAD_BOTS})) {{ return 403; }}"
+    return ""
+
+def apache_block(m):
+    if m == "xmlrpc": return '<Files "xmlrpc.php">\n  Require all denied\n</Files>'
+    if m == "wp_config_block": return '<Files "wp-config.php">\n  Require all denied\n</Files>'
+    if m == "dir_browsing": return "Options -Indexes"
+    if m == "unused_lang": return '<FilesMatch "\\.(pl|py|jsp|asp|aspx|sh|cgi|rb)$">\n  Require all denied\n</FilesMatch>'
+    if m == "sensitive_files": return '<FilesMatch "^(readme\\.html|readme\\.txt|license\\.txt|wp-config-sample\\.php|install\\.php|upgrade\\.php)$">\n  Require all denied\n</FilesMatch>'
+    if m == "potentially_sensitive": return '<FilesMatch "\\.(log|sql|bak|old|orig|save|swp|swo|dist|conf)$">\n  Require all denied\n</FilesMatch>'
+    if m == "htaccess_block": return '<FilesMatch "^\\.(htaccess|htpasswd|user\\.ini)$">\n  Require all denied\n</FilesMatch>'
+    if m == "bot_protection":
+        return ("<IfModule mod_rewrite.c>\n  RewriteEngine On\n  RewriteCond %{HTTP_USER_AGENT} (" + BAD_BOTS + ") [NC]\n  RewriteRule .* - [F,L]\n</IfModule>")
+    return ""   # php_* se aplican con .htaccess en el propio directorio (ver apply_dir_htaccess)
+
+PHP_DIRS = {"php_uploads": "wp-content/uploads", "php_wp_includes": "wp-includes", "php_cache_dirs": "wp-content/cache"}
+DIR_HT = f"# {MARK}: bloquea la ejecucion de PHP en este directorio (Apache)\n<FilesMatch \"\\.php$\">\n  Require all denied\n</FilesMatch>\n"
+
+def nginx_files(site): return [site.confdir + "/nginx.conf_elurkwpt", site.confdir + "/nginx.ssl.conf_elurkwpt"]
+
+def active_server_measures(site):
+    """Medidas activas segun los marcadores del include nginx (o del .htaccess si no hay nginx)."""
+    src = nginx_files(site)[0] if site.has_nginx else site.docroot + "/.htaccess"
+    try: txt = open(src, encoding="utf-8", errors="replace").read()
+    except OSError: return set()
+    return set(re.findall(r"# measure:(\w+)", txt))
+
+def write_server_rules(site, measures):
+    measures = [m for m in SERVER_MEASURES if m in measures]
+    # --- nginx: include por dominio (lo cargan las plantillas de Hestia: nginx.conf_* / nginx.ssl.conf_*)
+    if site.has_nginx:
+        body = f"# {MARK} - reglas de seguridad WordPress generadas por el panel. No editar a mano.\n"
+        for m in measures: body += f"# measure:{m}\n{nginx_block(site, m)}\n"
+        os.makedirs(site.confdir, exist_ok=True)
+        for f in nginx_files(site):
+            if measures:
+                with open(f, "w", encoding="utf-8") as fh: fh.write(body)
+                os.chmod(f, 0o644)
+            elif os.path.isfile(f): os.remove(f)
+        rc, _, err = sh(["nginx", "-t"], timeout=60)
+        if rc != 0:
+            for f in nginx_files(site):
+                if os.path.isfile(f): os.remove(f)
+            return False, "nginx -t fallo con las reglas; se han retirado: " + err[-400:]
+        restart = "v-restart-proxy" if site.proxy_system == "nginx" else "v-restart-web"
+        sh([BIN + "/" + restart], timeout=120)
+    # --- Apache: bloque marcado al principio del .htaccess del docroot (AllowOverride All en Hestia)
+    if site.has_apache:
+        ht = site.docroot + "/.htaccess"
+        try: txt = open(ht, encoding="utf-8", errors="replace").read()
+        except OSError: txt = ""
+        txt = re.sub(rf"# BEGIN {MARK}.*?# END {MARK}\n?", "", txt, flags=re.S)
+        blocks = [f"# measure:{m}\n{apache_block(m)}" for m in measures if apache_block(m)]
+        if blocks:
+            txt = f"# BEGIN {MARK}\n" + "\n".join(blocks) + f"\n# END {MARK}\n" + txt
+        if txt.strip() or os.path.isfile(ht):
+            site.write_as_user(ht, txt)
+        for m, rel in PHP_DIRS.items():
+            dpath = os.path.join(site.docroot, rel); fpath = os.path.join(dpath, ".htaccess")
+            if m in measures:
+                if os.path.isdir(dpath):
+                    cur = open(fpath, encoding="utf-8", errors="replace").read() if os.path.isfile(fpath) else ""
+                    if MARK not in cur: site.write_as_user(fpath, DIR_HT + cur)
+            elif os.path.isfile(fpath):
+                cur = open(fpath, encoding="utf-8", errors="replace").read()
+                new = cur.replace(DIR_HT, "")
+                if new.strip(): site.write_as_user(fpath, new)
+                else: os.remove(fpath)
+        sh([BIN + "/v-restart-web"], timeout=120)
+    return True, ""
+
+# --------------------------------------------------------------- medidas ----
+# id, nombre, reversible, critica, descripcion
+MEASURES = [
+    ("permissions", "Restringir acceso a archivos y directorios", False, True, "Propietario correcto, directorios 755, archivos 644 y wp-config.php 640."),
+    ("pingbacks", "Desactivar pingbacks", True, False, "Evita que el sitio se use en ataques DDoS por pingback (XML-RPC)."),
+    ("file_edit", "Desactivar la edición de archivos desde el escritorio", True, False, "DISALLOW_FILE_EDIT: nadie edita temas/plugins desde wp-admin."),
+    ("salts", "Configurar claves de seguridad", False, False, "Claves y salts únicos en wp-config.php. Regenerarlas cierra las sesiones abiertas."),
+    ("xmlrpc", "Bloquear acceso a xmlrpc.php", True, False, "Cierra el vector de fuerza bruta y amplificación por XML-RPC. Rompe Jetpack/app móvil."),
+    ("dir_browsing", "Bloquear el listado de directorios", True, False, "Nadie puede ver el índice de carpetas sin index."),
+    ("php_wp_includes", "Prohibir ejecución de PHP en wp-includes", True, False, "Solo se sirven los archivos estáticos de wp-includes."),
+    ("php_uploads", "Prohibir ejecución de PHP en wp-content/uploads", True, True, "Un PHP subido como 'imagen' no se ejecuta."),
+    ("wp_config_block", "Bloquear acceso a wp-config.php", True, False, "Ni un fallo del servidor expone las credenciales."),
+    ("script_concat", "Desactivar la concatenación de scripts del panel", True, False, "CONCATENATE_SCRIPTS false: mitiga el DoS por load-scripts.php."),
+    ("unused_lang", "Desactivar lenguajes de script no usados", True, False, "Bloquea .pl .py .cgi .sh .asp .jsp .rb en el sitio."),
+    ("php_cache_dirs", "Prohibir ejecución de PHP en directorios de caché", True, False, "wp-content/cache solo sirve estáticos."),
+    ("table_prefix", "Cambiar el prefijo de tablas por defecto", False, False, "Prefijo distinto de wp_. Cambio manual con copia previa (no automatizado)."),
+    ("bot_protection", "Protección contra bots", True, False, "Rechaza escáneres y bots agresivos conocidos por su User-Agent."),
+    ("sensitive_files", "Bloquear archivos sensibles", True, False, "readme.html, license.txt, wp-config-sample.php, install.php…"),
+    ("potentially_sensitive", "Bloquear archivos potencialmente sensibles", True, False, "Copias y volcados olvidados: .log .sql .bak .old .orig .swp…"),
+    ("htaccess_block", "Bloquear .htaccess y .htpasswd", True, False, "Nunca se sirven los archivos de control del servidor."),
+    ("author_scans", "Bloquear el escaneo de autores", True, False, "?author=N y la API de usuarios no revelan los nombres de usuario."),
+    ("admin_username", "Cambiar el nombre del administrador por defecto", False, False, "Ningún administrador se llama 'admin'. Cambio manual (crear otro admin y borrar 'admin')."),
+]
+CFG_MEASURES = {"file_edit": ("DISALLOW_FILE_EDIT", "true"), "script_concat": ("CONCATENATE_SCRIPTS", "false"),
+                "pingbacks": ("ELURK_WPT_PINGBACKS_OFF", "true"), "author_scans": ("ELURK_WPT_AUTHOR_SCANS_OFF", "true")}
+
+def check_permissions(site):
+    try:
+        st = os.stat(site.docroot)
+        if st.st_uid != site.pw.pw_uid: return "crit", "el propietario del sitio no es el usuario"
+        cs = os.stat(site.wpconfig)
+        if cs.st_uid != site.pw.pw_uid or (stat.S_IMODE(cs.st_mode) & 0o007): return "crit", "wp-config.php legible por todos o de otro propietario"
+    except OSError: return "unknown", ""
+    rc, o, _ = sh(["find", site.docroot, "-xdev", "(", "-perm", "-o+w", "-o", "-not", "-user", site.user, ")", "-print", "-quit"], timeout=120)
+    if o.strip(): return "crit", "hay archivos escribibles por todos o de otro propietario"
+    return "ok", ""
+
+def check_salts(site):
+    txt = open(site.wpconfig, encoding="utf-8", errors="replace").read()
+    keys = ["AUTH_KEY", "SECURE_AUTH_KEY", "LOGGED_IN_KEY", "NONCE_KEY", "AUTH_SALT", "SECURE_AUTH_SALT", "LOGGED_IN_SALT", "NONCE_SALT"]
+    if "put your unique phrase here" in txt: return "warn", "claves de ejemplo sin cambiar"
+    vals = []
+    for k in keys:
+        m = re.search(DEF_RE.format(name=k), txt, re.M)
+        if not m: return "warn", f"falta {k}"
+        vals.append(m.group(1))
+    if len(set(vals)) < len(vals): return "warn", "claves repetidas"
+    return "ok", ""
+
+def apply_salts(site):
+    txt = open(site.wpconfig, encoding="utf-8", errors="replace").read()
+    alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*()-_[]{}<>~`+=,.;:/?|"
+    for k in ["AUTH_KEY", "SECURE_AUTH_KEY", "LOGGED_IN_KEY", "NONCE_KEY", "AUTH_SALT", "SECURE_AUTH_SALT", "LOGGED_IN_SALT", "NONCE_SALT"]:
+        val = "".join(secrets.choice(alphabet) for _ in range(64)).replace("'", "!").replace("\\", "/")
+        line = f"define('{k}', '{val}');"
+        pat = re.compile(DEF_RE.format(name=k), re.M)
+        if pat.search(txt): txt = pat.sub(lambda _m, l=line: l, txt, count=1)
+        else:
+            anchor = re.search(r"^.*(stop editing|Happy publishing|Eso es todo).*$", txt, re.M | re.I)
+            txt = (txt[:anchor.start()] + line + "\n" + txt[anchor.start():]) if anchor else txt.replace("<?php", "<?php\n" + line, 1)
+    cfg_write(site, txt)
+
+def check_table_prefix(site):
+    txt = open(site.wpconfig, encoding="utf-8", errors="replace").read()
+    m = re.search(r"^\s*\$table_prefix\s*=\s*['\"]([^'\"]*)['\"]", txt, re.M)
+    if not m: return "unknown", ""
+    return ("warn", "prefijo wp_") if m.group(1) == "wp_" else ("ok", f"prefijo {m.group(1)}")
+
+def check_admin_username(site):
+    if not site.wp: return "unknown", "necesita WP-CLI"
+    users = site.wp_json(["user", "list", "--role=administrator", "--fields=user_login"])
+    if users is None: return "unknown", "WP-CLI no respondió"
+    logins = [u.get("user_login", "").lower() for u in users]
+    return ("warn", "existe el administrador 'admin'") if "admin" in logins else ("ok", "")
+
+def measures_status(site):
+    active = active_server_measures(site)
+    res = []
+    for mid, name, rev, crit, desc in MEASURES:
+        info = ""
+        if mid == "permissions": st, info = check_permissions(site)
+        elif mid == "salts": st, info = check_salts(site)
+        elif mid == "table_prefix": st, info = check_table_prefix(site)
+        elif mid == "admin_username": st, info = check_admin_username(site)
+        elif mid in CFG_MEASURES:
+            const, want = CFG_MEASURES[mid]
+            st = "ok" if cfg_get(site, const) == want else "warn"
+            if mid in ("pingbacks", "author_scans") and st == "ok" and not os.path.isfile(mu_path(site)): st = "warn"; info = "falta el mu-plugin"
+        elif mid in SERVER_MEASURES:
+            st = "ok" if mid in active else "warn"
+            if st == "warn" and mid == "dir_browsing" and site.has_nginx and not site.has_apache: st = "ok"; info = "nginx no lista directorios por defecto"
+            if st == "warn" and mid == "htaccess_block" and site.has_nginx: st = "ok"; info = "la plantilla de Hestia ya bloquea los archivos ocultos"
+        else: st = "unknown"
+        if st == "warn" and crit: st = "crit"
+        res.append({"id": mid, "name": name, "reversible": rev, "critical": crit, "status": st, "info": info, "description": desc,
+                    "manual": mid in ("table_prefix", "admin_username")})
+    return res
+
+def apply_measures(site, ids):
+    done, errors = [], []
+    server_active = active_server_measures(site)
+    touch_server = False
+    for mid in ids:
+        try:
+            if mid == "permissions":
+                sh(["chown", "-R", f"{site.user}:{site.user}", site.docroot], timeout=600)
+                sh(["find", site.docroot, "-type", "d", "-exec", "chmod", "755", "{}", "+"], timeout=600)
+                sh(["find", site.docroot, "-type", "f", "-exec", "chmod", "644", "{}", "+"], timeout=600)
+                os.chmod(site.wpconfig, 0o640); site.chown_user(site.wpconfig)
+                done.append(mid)
+            elif mid == "salts": apply_salts(site); done.append(mid)
+            elif mid in CFG_MEASURES:
+                const, want = CFG_MEASURES[mid]; cfg_set(site, const, want)
+                if mid in ("pingbacks", "author_scans"): mu_ensure(site)
+                done.append(mid)
+            elif mid in SERVER_MEASURES:
+                server_active.add(mid); touch_server = True; done.append(mid)
+            elif mid in ("table_prefix", "admin_username"):
+                errors.append(f"{mid}: medida manual, no se automatiza")
+            else: errors.append(f"{mid}: desconocida")
+        except Exception as e:
+            errors.append(f"{mid}: {e}")
+    if touch_server:
+        ok, err = write_server_rules(site, server_active)
+        if not ok: errors.append(err)
+    return done, errors
+
+def revert_measures(site, ids):
+    done, errors = [], []
+    server_active = active_server_measures(site)
+    touch_server = False
+    for mid in ids:
+        meta = next((m for m in MEASURES if m[0] == mid), None)
+        if not meta: errors.append(f"{mid}: desconocida"); continue
+        if not meta[2]: errors.append(f"{mid}: no es reversible"); continue
+        if mid in CFG_MEASURES:
+            cfg_del(site, CFG_MEASURES[mid][0]); mu_cleanup_if_unused(site); done.append(mid)
+        elif mid in SERVER_MEASURES:
+            server_active.discard(mid); touch_server = True; done.append(mid)
+    if touch_server:
+        ok, err = write_server_rules(site, server_active)
+        if not ok: errors.append(err)
+    return done, errors
+
+# ------------------------------------------------------- vulnerabilidades ----
+def vparse(v):
+    parts = re.split(r"[.\-+]", str(v).strip())
+    out_ = []
+    for p in parts:
+        if p.isdigit(): out_.append((0, int(p)))
+        elif p: out_.append((-1, p.lower()))   # sufijos (beta, rc) cuentan como menores
+    return out_
+def vcmp(a, b):
+    pa, pb = vparse(a), vparse(b)
+    n = max(len(pa), len(pb)); pa += [(0, 0)] * (n - len(pa)); pb += [(0, 0)] * (n - len(pb))
+    return (pa > pb) - (pa < pb)
+
+def vuln_fetch(kind, slug):
+    os.makedirs(DATA + "/vulns", exist_ok=True)
+    cache = f"{DATA}/vulns/{kind}-{re.sub(r'[^a-zA-Z0-9._-]', '_', slug)}.json"
+    try:
+        if time.time() - os.stat(cache).st_mtime < VULN_TTL:
+            return json.load(open(cache)), True
+    except (OSError, ValueError): pass
+    try:
+        req = urllib.request.Request(f"{VULN_API}/{kind}/{slug}/", headers={"User-Agent": "elurk-hestia-wp-toolkit/1.0"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            data = json.loads(r.read().decode("utf-8"))
+        with open(cache, "w") as f: json.dump(data, f)
+        return data, True
+    except Exception:
+        return None, False
+
+def affected(vuln, version):
+    op = vuln.get("operator") or {}
+    if not op: return True   # el core devuelve solo las de esa version
+    mn, mno, mx, mxo = op.get("min_version"), op.get("min_operator"), op.get("max_version"), op.get("max_operator")
+    if mn:
+        c = vcmp(version, mn)
+        if (mno or "ge") == "gt" and c <= 0: return False
+        if (mno or "ge") == "ge" and c < 0: return False
+    if mx:
+        c = vcmp(version, mx)
+        if (mxo or "lt") == "lt" and c >= 0: return False
+        if (mxo or "lt") == "le" and c > 0: return False
+    elif str(op.get("unfixed", "0")) != "1" and not mn:
+        return False
+    return True
+
+def vuln_score(v):
+    imp = (v.get("impact") or {})
+    for k in ("cvss", "cvss3"):
+        try:
+            s = float((imp.get(k) or {}).get("score"))
+            return s
+        except (TypeError, ValueError): pass
+    sev = ((imp.get("cvss") or {}).get("severity") or "").lower()[:1]
+    return {"l": 3.9, "m": 6.9, "h": 8.9, "c": 10.0}.get(sev, 5.0)
+
+def component_vulns(kind, slug, version):
+    data, ok = vuln_fetch(kind, slug)
+    if not ok or not data: return None
+    vl = ((data.get("data") or {}).get("vulnerability")) or []
+    hits = []
+    for v in vl:
+        if not affected(v, version): continue
+        src = (v.get("source") or [{}])[0]
+        hits.append({"name": v.get("name") or src.get("name") or "", "score": round(vuln_score(v), 1), "link": src.get("link", ""),
+                     "fixed_in": ((v.get("operator") or {}).get("max_version")) or ""})
+    hits.sort(key=lambda h: -h["score"])
+    return hits
+
+# ---------------------------------------------------------------- estado ----
+def cache_file(site): return f"{DATA}/cache/{site.user}_{site.domain}.json"
+def cache_clear(site):
+    try: os.remove(cache_file(site))
+    except OSError: pass
+
+def tools_status(site):
+    t = {"php": site.php, "wpcli": bool(site.wp)}
+    t["debug"] = cfg_get(site, "WP_DEBUG") == "true"
+    t["maintenance"] = cfg_get(site, "ELURK_WPT_MAINTENANCE") == "true"
+    t["indexing"] = None
+    if site.wp:
+        rc, o, _ = site.run_wp(["option", "get", "blog_public"])
+        if rc == 0: t["indexing"] = o.strip() == "1"
+    t["cache"] = {"available": site.web_system == "nginx", "on": (site.web.get("FASTCGI_CACHE") or "no") == "yes",
+                  "duration": site.web.get("FASTCGI_DURATION", ""), "reason": "" if site.web_system == "nginx" else "solo con nginx + PHP-FPM (sin Apache)"}
+    jobs = hst_json(["v-list-cron-jobs", site.user])
+    cron_ids = [j for j, v in jobs.items() if "wp-cron.php" in (v.get("CMD") or "") and site.docroot in (v.get("CMD") or "")]
+    t["wpcron"] = {"on": cfg_get(site, "DISABLE_WP_CRON") == "true" and bool(cron_ids), "jobs": cron_ids}
+    au = [x for x in (site.web.get("AUTH_USER") or "").split(",") if x]
+    t["httpauth"] = {"on": bool(au), "users": au}
+    return t
+
+def build_status(site):
+    st = {"ok": True, "user": site.user, "domain": site.domain, "docroot": site.docroot, "is_wp": site.is_wp, "wpcli": bool(site.wp),
+          "wpcli_path": site.wp, "php": site.php, "checked_at": time.strftime("%Y-%m-%d %H:%M:%S"), "vuln_source": "wpvulnerability.net",
+          "web_system": site.web_system, "proxy_system": site.proxy_system}
+    if not site.is_wp: return st
+    comps = []
+    core_ver = ""
+    if site.wp:
+        rc, o, _ = site.run_wp(["core", "version"])
+        core_ver = o.strip() if rc == 0 else ""
+    if not core_ver:
+        m = re.search(r"\$wp_version\s*=\s*'([^']+)'", open(site.docroot + "/wp-includes/version.php", encoding="utf-8", errors="replace").read())
+        core_ver = m.group(1) if m else ""
+    core_upd = ""
+    if site.wp:
+        cu = site.wp_json(["core", "check-update"])
+        if cu: core_upd = (cu[0].get("version") or "") if isinstance(cu, list) else ""
+    cv = component_vulns("core", core_ver, core_ver) if core_ver else None
+    comps.append({"type": "core", "slug": "wordpress", "title": "WordPress", "version": core_ver, "status": "active",
+                  "update_version": core_upd, "vulns": cv or [], "vuln_checked": cv is not None, "risk": max([v["score"] for v in cv], default=0.0) if cv else 0.0})
+    if site.wp:
+        for kind, cmd in (("plugin", "plugin"), ("theme", "theme")):
+            lst = site.wp_json([cmd, "list", "--fields=name,title,status,version,update,update_version"]) or []
+            for p in lst:
+                slug, ver = p.get("name", ""), p.get("version", "") or ""
+                vl = component_vulns(kind, slug, ver) if slug and ver else None
+                comps.append({"type": kind, "slug": slug, "title": p.get("title") or slug, "version": ver, "status": p.get("status", ""),
+                              "update_version": (p.get("update_version") or "") if p.get("update") == "available" else "",
+                              "vulns": vl or [], "vuln_checked": vl is not None, "risk": max([v["score"] for v in vl], default=0.0) if vl else 0.0})
+    comps.sort(key=lambda c: (-c["risk"], c["type"] != "core", c["title"].lower()))
+    st["components"] = comps
+    st["risk"] = max([c["risk"] for c in comps], default=0.0)
+    st["updates"] = [{"type": c["type"], "slug": c["slug"], "title": c["title"], "from": c["version"], "to": c["update_version"]} for c in comps if c["update_version"]]
+    st["measures"] = measures_status(site)
+    st["measures_pending"] = sum(1 for m in st["measures"] if m["status"] in ("warn", "crit"))
+    st["tools"] = tools_status(site)
+    return st
+
+def cmd_status(site, refresh):
+    cf = cache_file(site)
+    if not refresh:
+        try:
+            if time.time() - os.stat(cf).st_mtime < STATUS_TTL:
+                d = json.load(open(cf)); d["cached"] = True; out(d)
+        except (OSError, ValueError): pass
+    st = build_status(site)
+    os.makedirs(os.path.dirname(cf), exist_ok=True)
+    with open(cf, "w") as f: json.dump(st, f)
+    os.chmod(cf, 0o600)
+    out(st)
+
+# --------------------------------------------------------------- acciones ----
+def cmd_toggle(site, tool, state, extra):
+    on = state == "on"
+    if tool == "debug":
+        if on: cfg_set(site, "WP_DEBUG", "true"); cfg_set(site, "WP_DEBUG_LOG", "true"); cfg_set(site, "WP_DEBUG_DISPLAY", "false")
+        else: cfg_set(site, "WP_DEBUG", "false"); cfg_del(site, "WP_DEBUG_LOG"); cfg_del(site, "WP_DEBUG_DISPLAY")
+    elif tool == "maintenance":
+        if on: cfg_set(site, "ELURK_WPT_MAINTENANCE", "true"); mu_ensure(site)
+        else: cfg_del(site, "ELURK_WPT_MAINTENANCE"); mu_cleanup_if_unused(site)
+    elif tool == "indexing":
+        if not site.wp: fail("necesita WP-CLI")
+        rc, o, e = site.run_wp(["option", "update", "blog_public", "1" if on else "0"])
+        if rc != 0: fail("WP-CLI: " + (e or o)[-300:])
+    elif tool == "cache":
+        if site.web_system != "nginx": fail("la caché FastCGI solo está disponible con nginx + PHP-FPM")
+        cmd = [BIN + "/v-add-fastcgi-cache", site.user, site.domain, "2m", "yes"] if on else [BIN + "/v-delete-fastcgi-cache", site.user, site.domain, "yes"]
+        rc, o, e = sh(cmd, timeout=120)
+        if rc != 0: fail("Hestia: " + (e or o)[-300:])
+    elif tool == "wpcron":
+        phpbin = f"/usr/bin/php{site.php}" if site.php and os.path.exists(f"/usr/bin/php{site.php}") else "/usr/bin/php"
+        if on:
+            cfg_set(site, "DISABLE_WP_CRON", "true")
+            if not tools_status(site)["wpcron"]["jobs"]:
+                cmd_ = f"cd {site.docroot}; {phpbin} -q wp-cron.php > /dev/null 2>&1"
+                rc, o, e = sh([BIN + "/v-add-cron-job", site.user, "*/5", "*", "*", "*", "*", cmd_], timeout=60)
+                if rc != 0: cfg_del(site, "DISABLE_WP_CRON"); fail("Hestia no pudo crear la tarea cron: " + (e or o)[-300:])
+        else:
+            cfg_del(site, "DISABLE_WP_CRON")
+            for j in tools_status(site)["wpcron"]["jobs"]:
+                sh([BIN + "/v-delete-cron-job", site.user, j], timeout=60)
+    elif tool == "httpauth":
+        if on:
+            au, ap = (extra + ["", ""])[:2]
+            if not re.fullmatch(r"[a-zA-Z0-9._-]{1,32}", au) or len(ap) < 6: fail("usuario (letras/números) y contraseña (mín. 6) obligatorios")
+            rc, o, e = sh([BIN + "/v-add-web-domain-httpauth", site.user, site.domain, au, ap, "yes"], timeout=120)
+            if rc != 0: fail("Hestia: " + (e or o)[-300:])
+        else:
+            for au in tools_status(site)["httpauth"]["users"]:
+                sh([BIN + "/v-delete-web-domain-httpauth", site.user, site.domain, au, "yes"], timeout=120)
+    else: fail("herramienta desconocida")
+    cache_clear(site)
+    out({"ok": True, "tool": tool, "on": on, "tools": tools_status(site)})
+
+def cmd_update(site, kind, slug):
+    if not site.wp: fail("necesita WP-CLI")
+    log = ""
+    if kind == "core":
+        rc, o, e = site.run_wp(["core", "update"], timeout=600, skip=False); log += o + e
+        rc2, o2, e2 = site.run_wp(["core", "update-db"], timeout=600, skip=False); log += o2 + e2
+        ok = rc == 0
+    else:
+        args = [kind, "update", "--all"] if slug == "all" else [kind, "update", slug]
+        rc, o, e = site.run_wp(args, timeout=900, skip=False); log += o + e; ok = rc == 0
+    cache_clear(site)
+    out({"ok": ok, "summary" if ok else "error": log.strip()[-1500:]})
+
+def cmd_deactivate(site, slug):
+    if not site.wp: fail("necesita WP-CLI")
+    rc, o, e = site.run_wp(["plugin", "deactivate", slug], timeout=300, skip=False)
+    cache_clear(site)
+    out({"ok": rc == 0, "summary" if rc == 0 else "error": (o + e).strip()[-800:]})
+
+# ------------------------------------------------------------------ main ----
+def main(argv):
+    if len(argv) < 2: fail("uso: hestia-wp-toolkit SUBCOMANDO ...")
+    cmd, args = argv[1], argv[2:]
+    if cmd == "wpcli-install":
+        if len(args) < 1 or not re.fullmatch(r"[a-zA-Z0-9_-]{1,32}", args[0]): fail("usuario invalido")
+        rc, o, e = sh([BIN + "/v-add-user-wp-cli", args[0]], timeout=600)
+        out({"ok": rc == 0, "summary" if rc == 0 else "error": (o + e).strip()[-600:]})
+    if len(args) < 2: fail("faltan usuario y dominio")
+    site = Site(args[0], args[1]); rest = args[2:]
+    if cmd == "status": cmd_status(site, "--refresh" in rest)
+    if not site.is_wp: fail("no se detecta WordPress en este dominio")
+    if cmd == "vulns-refresh":
+        for f in os.listdir(DATA + "/vulns") if os.path.isdir(DATA + "/vulns") else []:
+            try: os.remove(f"{DATA}/vulns/{f}")
+            except OSError: pass
+        cache_clear(site); out({"ok": True})
+    if cmd in ("apply", "revert"):
+        if not rest: fail("faltan medidas")
+        ids = [m[0] for m in MEASURES if m[2] or cmd == "apply"] if rest[0] == "all" else [x for x in rest[0].split(",") if x]
+        if cmd == "apply": ids = [i for i in ids if i not in ("table_prefix", "admin_username")] if rest[0] == "all" else ids
+        for i in ids:
+            if not re.fullmatch(r"[a-z_]{1,32}", i): fail("id de medida invalido")
+        done, errors = (apply_measures if cmd == "apply" else revert_measures)(site, ids)
+        cache_clear(site)
+        out({"ok": not errors, "done": done, "errors": errors, "measures": measures_status(site)})
+    if cmd == "update":
+        if len(rest) < 2 or rest[0] not in ("core", "plugin", "theme") or not re.fullmatch(r"[a-zA-Z0-9._-]{1,100}", rest[1]): fail("argumentos invalidos")
+        cmd_update(site, rest[0], rest[1])
+    if cmd == "deactivate":
+        if len(rest) < 1 or not re.fullmatch(r"[a-zA-Z0-9._-]{1,100}", rest[0]): fail("slug invalido")
+        cmd_deactivate(site, rest[0])
+    if cmd == "toggle":
+        if len(rest) < 2 or rest[0] not in ("debug", "maintenance", "indexing", "cache", "wpcron", "httpauth") or rest[1] not in ("on", "off"): fail("argumentos invalidos")
+        cmd_toggle(site, rest[0], rest[1], rest[2:])
+    fail("subcomando desconocido")
+
+if __name__ == "__main__":
+    main(sys.argv)

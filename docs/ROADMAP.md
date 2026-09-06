@@ -14,6 +14,23 @@ con CSS para un aspecto limpio, moderno y con marca Elurk (cohesivo, no Plesk
 idéntico), y diferenciarse por lo que Plesk NO da: pestañas de valor (Seguridad,
 WordPress, Logs, Seguimiento de correo). Diferenciar por función, no por chrome.
 
+## Fase 3 — CONSTRUIDO 2026-09-05, PENDIENTE DE PROBAR EN EL LAB
+
+Dos piezas grandes pedidas por el usuario tras comparar con Plesk (capturas 05-09):
+
+- [x] **Pestaña Copias** en la vista por dominio (`docs/SPEC-BACKUPS.md`): lista de
+  copias del usuario (tar clásico + snapshots restic), diálogo de restauración con
+  doble lista tipo Plesk, tipos: sitio web · archivos sueltos · buzones sueltos ·
+  dominio de correo · bases de datos · zona DNS; "solo configuración"; progreso en
+  segundo plano. Wrapper `bin/v-elurk-backup` (sudoers) + `webpages/domain/action.php`.
+- [x] **WordPress Toolkit** con paridad Plesk (`docs/SPEC-WP-TOOLKIT.md`): tarjetas de
+  riesgo/actualizaciones/medidas/versiones, componentes vulnerables (wpvulnerability.net,
+  sin clave), 19 medidas de seguridad con estado/aplicar/revertir, herramientas
+  (depuración, mantenimiento, contraseña, indexación, caché nginx, wp-cron).
+  Motor `bin/hestia-wp-toolkit` (python3) detrás de `v-wp-manage`.
+- [ ] Probar en el lab siguiendo `docs/DEPLOY.md` § "Copias y WordPress Toolkit" y
+  mandar capturas (<2000 px) de cada pestaña para pulir.
+
 ---
 
 ## Fase 1 — HECHO (rama elurk/soberania)

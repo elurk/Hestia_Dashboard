@@ -378,7 +378,10 @@ EOF
 
 # Function to install the admin tabs (Security/Fail2ban + WordPress)
 install_admin_tabs() {
-    print_status "Installing admin tabs (Security + WordPress)..."
+    print_status "Installing admin tabs (Security + WordPress + Domain view)..."
+    # Datos propios: cache del WP Toolkit y vulnerabilidades (solo root)
+    mkdir -p /usr/local/hestia/data/elurk/wpt/cache /usr/local/hestia/data/elurk/wpt/vulns
+    chmod 700 /usr/local/hestia/data/elurk /usr/local/hestia/data/elurk/wpt
 
     # Controladores y endpoints de cada pestana -> web/list/<tab>/
     # (domain = vista por dominio estilo Plesk; no tiene action.php)
@@ -387,6 +390,14 @@ install_admin_tabs() {
         local dst="/usr/local/hestia/web/list/$tab"
         if [ -d "$src" ]; then
             mkdir -p "$dst"
+            # Sintaxis PHP antes de tocar el panel (un parse error dejaria la pagina en blanco)
+            for f in "$src/index.php" "$src/action.php" "$src"/list_*.php; do
+                [ -f "$f" ] || continue
+                if command -v php >/dev/null 2>&1 && ! php -l "$f" >/dev/null 2>&1; then
+                    print_error "PHP syntax error in $f - tab '$tab' NOT installed"; php -l "$f" || true
+                    continue 2
+                fi
+            done
             cp "$src/index.php"  "$dst/index.php"
             [ -f "$src/action.php" ] && cp "$src/action.php" "$dst/action.php"
             chown -R hestiaweb:hestiaweb "$dst"
@@ -410,7 +421,7 @@ install_admin_tabs() {
     fi
 
     # Wrappers de backend acotados -> bin/
-    for wrapper in v-fail2ban-action v-wp-manage hestia-wp-harden; do
+    for wrapper in v-fail2ban-action v-wp-manage hestia-wp-harden hestia-wp-toolkit v-elurk-backup; do
         if [ -f "$SCRIPT_DIR/bin/$wrapper" ]; then
             cp "$SCRIPT_DIR/bin/$wrapper" "$BIN_DIR/$wrapper"
             chown root:root "$BIN_DIR/$wrapper"
@@ -667,6 +678,7 @@ $WEB_USER ALL=(root) NOPASSWD: /usr/local/hestia/bin/v-change-user-theme
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/hestia/bin/v-change-user-css-theme
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/hestia/bin/v-fail2ban-action
 $WEB_USER ALL=(root) NOPASSWD: /usr/local/hestia/bin/v-wp-manage
+$WEB_USER ALL=(root) NOPASSWD: /usr/local/hestia/bin/v-elurk-backup
 EOF
     
     chmod 440 "$SUDOERS_FILE"
