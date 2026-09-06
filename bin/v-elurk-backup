@@ -20,6 +20,11 @@
 #                                      -> SOLO configuracion, sin contenido
 #   hosts                              -> destinos remotos configurados (admin)
 #   create  USER [full|restic]         -> crear una copia ahora (v-backup-user, 2o plano)
+#   delete  USER COPIA                 -> borrar una copia (tar o snapshot restic)
+#   retention USER N|all               -> cuantas copias conserva Hestia (BACKUPS en user.conf)
+#   schedule USER get                  -> programacion propia del usuario (cron del admin)
+#   schedule USER set MIN HOUR DAY MONTH WDAY [full|restic]
+#   schedule USER del
 #
 # COPIA = nombre del tar (usuario.AAAA-MM-DD_HH-MM-SS.tar) o id de snapshot restic
 # (hex). El script decide el modo por el formato.
@@ -512,6 +517,67 @@ create)
         if [ "$kind" = restic ]; then nice -n 19 ionice -c 3 v-backup-user-restic "$u"; else nice -n 19 ionice -c 3 v-backup-user "$u"; fi
     }
     run_bg "$u" "Crear copia $( [ "$kind" = restic ] && echo incremental || echo completa ) de $u" do_create
+    ;;
+
+delete)
+    u="${1:-}"; b="${2:-}"
+    valid_user "$u" || json_err "usuario invalido"
+    check_backup "$u" "$b"
+    if [ "$MODE" = tar ]; then out=$(v-delete-user-backup "$u" "$b" 2>&1); rc=$?; else out=$(v-delete-user-backup-restic "$u" "$b" 2>&1); rc=$?; fi
+    [ $rc -eq 0 ] || json_err "Hestia no pudo borrar la copia: $(echo "$out" | tail -c 300)"
+    json_ok '{"summary":"Copia borrada."}'
+    ;;
+
+retention)
+    u="${1:-}"; n="${2:-}"
+    valid_user "$u" || json_err "usuario invalido"
+    [ "$n" = all ] && n=999
+    echo "$n" | grep -qE '^[0-9]{1,3}$' || json_err "valor invalido"
+    # v-backup-user lee BACKUPS de user.conf (el paquete solo lo copia ahi al asignarlo).
+    # Con 999 nunca borra copias antiguas: las gestiona el usuario a mano.
+    uc="$HESTIA/data/users/$u/user.conf"
+    grep -q "^BACKUPS=" "$uc" || json_err "user.conf sin campo BACKUPS"
+    sed -i "s/^BACKUPS='[^']*'/BACKUPS='$n'/" "$uc"
+    json_ok "{\"retention\":\"$n\"}"
+    ;;
+
+schedule)
+    u="${1:-}"; op="${2:-get}"
+    valid_user "$u" || json_err "usuario invalido"
+    root_user="${ROOT_USER:-admin}"
+    # La copia programada vive en el cron del administrador (como el v-backup-users de Hestia).
+    find_jobs() { v-list-cron-jobs "$root_user" json 2>/dev/null | python3 -c '
+import json, re, sys
+u = sys.argv[1]
+try: jobs = json.load(sys.stdin)
+except Exception: jobs = {}
+for j, v in (jobs or {}).items():
+    if re.search(r"v-backup-user(-restic)? " + re.escape(u) + r"$", (v.get("CMD") or "").strip()):
+        print(json.dumps({"job": j, "min": v.get("MIN"), "hour": v.get("HOUR"), "day": v.get("DAY"), "month": v.get("MONTH"), "wday": v.get("WDAY"), "kind": "restic" if "-restic" in v.get("CMD","") else "full"}))' "$u"; }
+    case "$op" in
+        get)
+            j=$(find_jobs | head -1)
+            python3 -c 'import json,sys; j=sys.argv[1]; print(json.dumps({"ok":True,"schedule": json.loads(j) if j else None, "root_user": sys.argv[2]}))' "$j" "$root_user"
+            ;;
+        set)
+            mi="${3:-}"; ho="${4:-}"; da="${5:-}"; mo="${6:-}"; wd="${7:-}"; kind="${8:-full}"
+            for f in "$mi" "$ho" "$da" "$mo" "$wd"; do echo "$f" | grep -qE '^(\*|[0-9]{1,2}|\*/[0-9]{1,2})$' || json_err "campo de cron invalido: $f"; done
+            [ "$kind" = full ] || [ "$kind" = restic ] || json_err "tipo invalido"
+            if [ "$kind" = restic ]; then restic_ready "$u" || json_err "restic no esta configurado para este usuario"; fi
+            # Sustituir la programacion anterior si la habia
+            for j in $(find_jobs | python3 -c 'import json,sys; [print(json.loads(l)["job"]) for l in sys.stdin if l.strip()]'); do v-delete-cron-job "$root_user" "$j" no >/dev/null 2>&1; done
+            cmdline="sudo /usr/local/hestia/bin/v-backup-user$( [ "$kind" = restic ] && echo -restic ) $u"
+            out=$(v-add-cron-job "$root_user" "$mi" "$ho" "$da" "$mo" "$wd" "$cmdline" 2>&1) || json_err "Hestia no pudo crear la tarea: $(echo "$out" | tail -c 300)"
+            j=$(find_jobs | head -1)
+            python3 -c 'import json,sys; j=sys.argv[1]; print(json.dumps({"ok":True,"schedule": json.loads(j) if j else None}))' "$j"
+            ;;
+        del)
+            n=0
+            for j in $(find_jobs | python3 -c 'import json,sys; [print(json.loads(l)["job"]) for l in sys.stdin if l.strip()]'); do v-delete-cron-job "$root_user" "$j" >/dev/null 2>&1 && n=$((n+1)); done
+            json_ok "{\"deleted\":$n}"
+            ;;
+        *) json_err "operacion invalida" ;;
+    esac
     ;;
 
 hosts)

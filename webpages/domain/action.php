@@ -107,6 +107,30 @@ switch ($action) {
         $what = (string) ($_POST["what"] ?? "");
         if (!in_array($what, ["web", "mail", "dns"], true)) { dv_fail("tipo invalido"); }
         dv_run("$bk restore-config " . $q($owner) . " " . $q($backup) . " " . $q($domain) . " $what");
+    case "bk-delete":
+        if (!preg_match('/^([a-zA-Z0-9_-]+\.\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.tar|[0-9a-f]{8,64})$/', $backup)) { dv_fail("copia invalida"); }
+        dv_run("$bk delete " . $q($owner) . " " . $q($backup));
+    case "bk-retention":
+        if (!$isAdmin) { dv_fail("forbidden", 403); }
+        $n = (string) ($_POST["n"] ?? "");
+        if (!preg_match('/^([0-9]{1,3}|all)$/', $n)) { dv_fail("valor invalido"); }
+        dv_run("$bk retention " . $q($owner) . " $n");
+    case "bk-schedule-get":
+        if (!$isAdmin) { dv_fail("forbidden", 403); }
+        dv_run("$bk schedule " . $q($owner) . " get");
+    case "bk-schedule-set":
+        if (!$isAdmin) { dv_fail("forbidden", 403); }
+        $f = [];
+        foreach (["min", "hour", "day", "month", "wday"] as $k) {
+            $v = (string) ($_POST[$k] ?? "");
+            if (!preg_match('/^(\*|[0-9]{1,2}|\*\/[0-9]{1,2})$/', $v)) { dv_fail("campo invalido: $k"); }
+            $f[] = $q($v);
+        }
+        $kind = (($_POST["kind"] ?? "") === "restic") ? "restic" : "full";
+        dv_run("$bk schedule " . $q($owner) . " set " . implode(" ", $f) . " $kind");
+    case "bk-schedule-del":
+        if (!$isAdmin) { dv_fail("forbidden", 403); }
+        dv_run("$bk schedule " . $q($owner) . " del");
     case "bk-hosts":
         if (!$isAdmin) { dv_fail("forbidden", 403); }
         dv_run("$bk hosts");

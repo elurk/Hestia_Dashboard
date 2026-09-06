@@ -368,6 +368,29 @@ html[data-elurk-theme="dark"] .dv-toggle { border-bottom-color:#3A434C; } html[d
             </div>
             <div id="bk-msg"></div>
             <p class="dv-meta" id="bk-retention" style="margin:.25rem 0 .6rem"></p>
+            <?php if ($isAdmin): ?>
+            <div class="dv-card" id="bk-admin" style="margin-bottom:1rem;min-height:0">
+                <div class="h">Programación y retención de <?= $h($owner) ?> <i class="fas fa-calendar-days"></i></div>
+                <div class="dv-form-row" style="margin-top:.5rem">
+                    <label>Conservar</label>
+                    <div><select id="bk-ret-sel"><option value="all">Todas las copias (las borro yo a mano)</option><option value="3">Las 3 últimas</option><option value="7">Las 7 últimas</option><option value="14">Las 14 últimas</option><option value="30">Las 30 últimas</option></select>
+                        <button class="dv-btn sm" id="bk-ret-save" type="button">Guardar</button>
+                        <div class="dv-meta" style="margin-top:.3rem">Cada copia completa ocupa el tamaño entero del usuario: vigila el disco si conservas todas. Si reasignas el paquete al usuario, Hestia vuelve a poner el valor del paquete.</div></div>
+                </div>
+                <div class="dv-form-row" style="margin-bottom:0">
+                    <label>Copia programada</label>
+                    <div>
+                        <select id="bk-sch-freq"><option value="none">Sin programación propia</option><option value="daily">Diaria</option><option value="weekly">Semanal</option><option value="monthly">Mensual</option></select>
+                        <select id="bk-sch-wday" hidden><option value="1">lunes</option><option value="2">martes</option><option value="3">miércoles</option><option value="4">jueves</option><option value="5">viernes</option><option value="6">sábado</option><option value="0">domingo</option></select>
+                        <select id="bk-sch-mday" hidden></select>
+                        a las <select id="bk-sch-hour"></select>:<select id="bk-sch-min"><option value="0">00</option><option value="15">15</option><option value="30">30</option><option value="45">45</option></select>
+                        <select id="bk-sch-kind"><option value="full">completa</option><option value="restic" hidden>incremental (restic)</option></select>
+                        <button class="dv-btn sm" id="bk-sch-save" type="button">Guardar</button>
+                        <div class="dv-meta" id="bk-sch-info" style="margin-top:.3rem"></div>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
             <div id="bk-list"><div class="dv-empty"><span class="dv-spin"></span> Cargando copias…</div></div>
         </div>
     </div>
@@ -610,10 +633,18 @@ html[data-elurk-theme="dark"] .dv-toggle { border-bottom-color:#3A434C; } html[d
                     var here = b.kind === "incremental" ? '<span class="dv-badge ok">incremental</span>' : ((inWeb ? '<span class="dv-badge ok">web</span> ' : "") + (inMail ? '<span class="dv-badge ok">correo</span> ' : "") + (inDns ? '<span class="dv-badge ok">DNS</span>' : "") || '<span class="dv-badge warn">no incluido</span>');
                     html += "<tr><td><b>" + esc(b.date) + "</b> " + esc(b.time) + "</td><td>" + (b.kind === "incremental" ? "Incremental (restic)" : "Completa") + (b.local ? "" : ' <span class="dv-badge warn" title="Solo en el destino remoto">remota</span>') + "</td><td>" + fmtMB(b.size_mb) + "</td><td style=\"font-size:.85rem\">" + esc(cont) + "</td><td>" + here + "</td>" +
                         '<td class="act">' + (b.kind === "full" && b.local ? '<a href="/download/backup/?backup=' + encodeURIComponent(b.id) + '&token=' + encodeURIComponent(TOKEN) + '" title="Descargar el archivo completo"><i class="fas fa-download"></i> Descargar</a>' : "") +
-                        '<button type="button" class="bk-restore-btn" data-i="' + i + '"' + (b.local ? "" : " disabled") + '><i class="fas fa-clock-rotate-left"></i> Restaurar</button></td></tr>';
+                        '<button type="button" class="bk-restore-btn" data-i="' + i + '"' + (b.local ? "" : " disabled") + '><i class="fas fa-clock-rotate-left"></i> Restaurar</button>' +
+                        '<button type="button" class="bk-delete-btn" data-i="' + i + '" style="color:#A32633"><i class="fas fa-trash"></i> Borrar</button></td></tr>';
                 });
                 bkList.innerHTML = html + "</tbody></table>";
                 bkList.querySelectorAll(".bk-restore-btn").forEach(function (btn) { btn.addEventListener("click", function () { openRestore(bkBackups[Number(btn.dataset.i)]); }); });
+                bkList.querySelectorAll(".bk-delete-btn").forEach(function (btn) { btn.addEventListener("click", function () {
+                    var b = bkBackups[Number(btn.dataset.i)];
+                    if (!window.confirm("Borrar la copia del " + b.date + " " + b.time + " (" + (b.kind === "incremental" ? "snapshot restic" : fmtMB(b.size_mb)) + "). No se puede deshacer. ¿Continuar?")) { return; }
+                    btn.disabled = true; msg(bkMsg, "info", "Borrando…");
+                    post({ action: "bk-delete", backup: b.id }).then(function (r) { msg(bkMsg, r.ok ? "ok" : "err", r.ok ? "Copia borrada." : (r.error || "error")); loadBackups(); });
+                }); });
+                if (IS_ADMIN) { var rs = document.getElementById("bk-ret-sel"); if (rs) { var n = parseInt(r.retention, 10); rs.value = (!isNaN(n) && n >= 999) ? "all" : (Array.prototype.some.call(rs.options, function (o) { return o.value === String(n); }) ? String(n) : "all"); } var rk = document.querySelector("#bk-sch-kind option[value=restic]"); if (rk) { rk.hidden = !r.restic; } }
             });
         }
         function pollStatus(force) {
@@ -638,6 +669,42 @@ html[data-elurk-theme="dark"] .dv-toggle { border-bottom-color:#3A434C; } html[d
                 if (!r.ok) { msg(bkMsg, "err", r.error || "error"); return; }
                 msg(bkMsg, "", ""); pollStatus(true);
             });
+        }
+        if (IS_ADMIN && document.getElementById("bk-admin")) {
+            var hourSel = document.getElementById("bk-sch-hour"), mdaySel = document.getElementById("bk-sch-mday"), freqSel = document.getElementById("bk-sch-freq");
+            for (var hh = 0; hh < 24; hh++) { hourSel.insertAdjacentHTML("beforeend", '<option value="' + hh + '">' + (hh < 10 ? "0" + hh : hh) + "</option>"); }
+            for (var dd = 1; dd <= 28; dd++) { mdaySel.insertAdjacentHTML("beforeend", '<option value="' + dd + '">día ' + dd + "</option>"); }
+            hourSel.value = "3";
+            function schedUI() { var f = freqSel.value; document.getElementById("bk-sch-wday").hidden = f !== "weekly"; mdaySel.hidden = f !== "monthly"; ["bk-sch-hour", "bk-sch-min", "bk-sch-kind"].forEach(function (id) { document.getElementById(id).style.display = f === "none" ? "none" : ""; }); }
+            freqSel.addEventListener("change", schedUI);
+            function loadSchedule() {
+                post({ action: "bk-schedule-get" }).then(function (r) {
+                    var info = document.getElementById("bk-sch-info");
+                    if (!r.ok) { info.textContent = r.error || ""; return; }
+                    var sc = r.schedule;
+                    if (sc) {
+                        freqSel.value = sc.wday !== "*" ? "weekly" : (sc.day !== "*" ? "monthly" : "daily");
+                        if (sc.wday !== "*") { document.getElementById("bk-sch-wday").value = sc.wday; }
+                        if (sc.day !== "*") { mdaySel.value = sc.day; }
+                        hourSel.value = String(parseInt(sc.hour, 10)); document.getElementById("bk-sch-min").value = String(parseInt(sc.min, 10)); document.getElementById("bk-sch-kind").value = sc.kind || "full";
+                        info.innerHTML = "Programada como tarea cron del usuario " + esc(r.root_user || "admin") + " (nº " + esc(sc.job) + "). Además Hestia hace su copia global diaria de todos los usuarios (Cron del administrador, v-backup-users); desactívala ahí si solo quieres ésta.";
+                    } else {
+                        freqSel.value = "none";
+                        info.innerHTML = "Sin programación propia: solo la copia global diaria de Hestia (v-backup-users en el Cron del administrador).";
+                    }
+                    schedUI();
+                });
+            }
+            document.getElementById("bk-sch-save").addEventListener("click", function () {
+                var f = freqSel.value, btn = this; btn.disabled = true;
+                var req = f === "none" ? { action: "bk-schedule-del" } : { action: "bk-schedule-set", min: document.getElementById("bk-sch-min").value, hour: hourSel.value, day: f === "monthly" ? mdaySel.value : "*", month: "*", wday: f === "weekly" ? document.getElementById("bk-sch-wday").value : "*", kind: document.getElementById("bk-sch-kind").value };
+                post(req).then(function (r) { btn.disabled = false; msg(bkMsg, r.ok ? "ok" : "err", r.ok ? "Programación guardada." : (r.error || "error")); loadSchedule(); });
+            });
+            document.getElementById("bk-ret-save").addEventListener("click", function () {
+                var btn = this; btn.disabled = true;
+                post({ action: "bk-retention", n: document.getElementById("bk-ret-sel").value }).then(function (r) { btn.disabled = false; msg(bkMsg, r.ok ? "ok" : "err", r.ok ? "Retención guardada." : (r.error || "error")); loadBackups(); });
+            });
+            var _onShowBackup = onShow.backup; onShow.backup = function () { var first = !bkLoaded; _onShowBackup(); if (first) { loadSchedule(); } };
         }
         document.getElementById("bk-create").addEventListener("click", function () { createBackup("full"); });
         document.getElementById("bk-create-restic").addEventListener("click", function () { createBackup("restic"); });

@@ -207,3 +207,13 @@ permiten restaurar archivos y buzones sin índice previo.
 
 Si algo no responde: `sudo -u hestiaweb sudo /usr/local/hestia/bin/v-elurk-backup list USER`
 y `... v-wp-manage status USER DOMINIO --refresh` en la consola muestran el JSON o el error.
+
+### Retención, borrado y programación (pestaña Copias, solo admin)
+- **Conservar**: Hestia borra las copias antiguas según BACKUPS del usuario. "Todas las
+  copias" pone BACKUPS=999 en `user.conf` (no en el paquete): nunca borra, las quitas tú
+  con el botón Borrar de cada fila. Si reasignas el paquete al usuario, vuelve el valor
+  del paquete. Cada copia completa ocupa el tamaño entero del usuario: vigila el disco.
+- **Copia programada**: crea una tarea cron en el usuario administrador (ROOT_USER) con
+  `sudo /usr/local/hestia/bin/v-backup-user USUARIO` (o `-restic`). Hestia mantiene además
+  su copia global diaria de todos los usuarios (`v-backup-users` en el Cron del admin);
+  desactívala ahí si solo quieres las programadas por usuario.
