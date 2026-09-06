@@ -357,11 +357,13 @@ html[data-elurk-theme="dark"] .dv-toggle { border-bottom-color:#3A434C; } html[d
         <div class="dv-group">
             <h3>Copias de seguridad de <?= $h($owner) ?>
                 <span class="dv-meta" style="font-weight:normal">las copias de Hestia son por usuario: incluyen <?= $h($domain) ?> y el resto de sus dominios</span>
+                <button class="dv-btn sm" id="bk-create" type="button"><i class="fas fa-plus"></i> Crear copia</button>
+                <button class="dv-btn sm" id="bk-create-restic" type="button" hidden><i class="fas fa-layer-group"></i> Crear incremental</button>
                 <button class="dv-btn sec sm" id="bk-reload" type="button"><i class="fas fa-rotate"></i> Actualizar</button>
                 <a class="dv-btn sec sm" href="/list/backup/?<?= ltrim($back("backup"), "&") ?>"><i class="fas fa-gear"></i> Gestión nativa</a>
             </h3>
             <div id="bk-progress" hidden>
-                <div class="dv-msg info"><span class="dv-spin"></span> <span id="bk-progress-title">Restauración en curso…</span></div>
+                <div class="dv-msg info"><span class="dv-spin"></span> <span id="bk-progress-title">Tarea en curso…</span></div>
                 <div class="dv-log" id="bk-log"></div>
             </div>
             <div id="bk-msg"></div>
@@ -592,6 +594,7 @@ html[data-elurk-theme="dark"] .dv-toggle { border-bottom-color:#3A434C; } html[d
             post({ action: "bk-list" }).then(function (r) {
                 if (!r.ok) { bkList.innerHTML = '<div class="dv-empty">No se pudieron leer las copias: ' + esc(r.error || "") + "</div>"; return; }
                 bkBackups = r.backups || [];
+                document.getElementById("bk-create-restic").hidden = !r.restic;
                 if (!bkBackups.length) { bkList.innerHTML = '<div class="dv-empty">Este usuario no tiene copias todavía. Hestia las hace cada noche (según el paquete del usuario).</div>'; return; }
                 var html = '<table class="dv-table"><thead><tr><th>Fecha</th><th>Tipo</th><th>Tamaño</th><th>Contenido</th><th>Este dominio</th><th></th></tr></thead><tbody>';
                 bkBackups.forEach(function (b, i) {
@@ -611,7 +614,8 @@ html[data-elurk-theme="dark"] .dv-toggle { border-bottom-color:#3A434C; } html[d
                 if (!r.ok) { return; }
                 if (r.running || force) {
                     bkProg.hidden = false; bkLog.textContent = r.log || ""; bkLog.scrollTop = bkLog.scrollHeight;
-                    document.getElementById("bk-progress-title").textContent = r.running ? "Restauración en curso… (puedes salir de esta página, sigue en el servidor)" : (r.state === "ok" ? "Restauración terminada." : "La restauración terminó con errores. Revisa el registro.");
+                    var job = ((r.log || "").match(/^== INICIO == (.*)$/m) || [])[1] || "Tarea";
+                    document.getElementById("bk-progress-title").textContent = r.running ? job + " — en curso (puedes salir de esta página, sigue en el servidor)" : (r.state === "ok" ? job + " — terminada." : job + " — terminó con errores. Revisa el registro.");
                     bkProg.querySelector(".dv-msg").className = "dv-msg " + (r.running ? "info" : (r.state === "ok" ? "ok" : "err"));
                     bkProg.querySelector(".dv-spin").style.display = r.running ? "" : "none";
                     if (r.running) { pollTimer = setTimeout(function () { pollStatus(true); }, 3000); } else { loadBackups(); }
@@ -620,6 +624,16 @@ html[data-elurk-theme="dark"] .dv-toggle { border-bottom-color:#3A434C; } html[d
         }
         onShow.backup = function () { if (!bkLoaded) { bkLoaded = true; loadBackups(); pollStatus(false); } };
         document.getElementById("bk-reload").addEventListener("click", function () { loadBackups(); pollStatus(false); });
+        function createBackup(kind) {
+            if (!window.confirm(kind === "restic" ? "Se crea un snapshot incremental (restic) del usuario " + OWNER + " ahora. ¿Continuar?" : "Se crea una copia completa del usuario " + OWNER + " ahora (todos sus dominios, correo y BBDD). Puede tardar según el tamaño. ¿Continuar?")) { return; }
+            msg(bkMsg, "info", "Lanzando la copia…");
+            post({ action: "bk-create", kind: kind }).then(function (r) {
+                if (!r.ok) { msg(bkMsg, "err", r.error || "error"); return; }
+                msg(bkMsg, "", ""); pollStatus(true);
+            });
+        }
+        document.getElementById("bk-create").addEventListener("click", function () { createBackup("full"); });
+        document.getElementById("bk-create-restic").addEventListener("click", function () { createBackup("restic"); });
 
         /* ---- Modal de restauracion (doble lista tipo Plesk) ---- */
         var TYPES = [

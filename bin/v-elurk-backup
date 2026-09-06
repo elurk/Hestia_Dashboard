@@ -19,6 +19,7 @@
 #   restore-config USER COPIA DOMINIO web|mail|dns
 #                                      -> SOLO configuracion, sin contenido
 #   hosts                              -> destinos remotos configurados (admin)
+#   create  USER [full|restic]         -> crear una copia ahora (v-backup-user, 2o plano)
 #
 # COPIA = nombre del tar (usuario.AAAA-MM-DD_HH-MM-SS.tar) o id de snapshot restic
 # (hex). El script decide el modo por el formato.
@@ -494,6 +495,19 @@ PYEOF
         dns)  v-rebuild-dns-domain "$u" "$d" yes >/dev/null 2>&1 || json_err "config aplicada pero v-rebuild-dns-domain fallo" ;;
     esac
     python3 -c 'import json,sys; print(json.dumps({"ok":True,"summary":sys.argv[1]}, ensure_ascii=False))' "Configuracion $what de $d restaurada$extra. Copia previa en $CONF_BAK_DIR ($stamp)."
+    ;;
+
+create)
+    u="${1:-}"; kind="${2:-full}"
+    valid_user "$u" || json_err "usuario invalido"
+    [ "$kind" = full ] || [ "$kind" = restic ] || json_err "tipo invalido (full|restic)"
+    if [ "$kind" = restic ]; then restic_ready "$u" || json_err "restic no esta configurado para este usuario"; fi
+    # v-backup-user rechaza si el paquete tiene BACKUPS=0 o si ya hay otra copia en marcha;
+    # su salida (progreso paso a paso) va al registro que muestra el panel.
+    do_create() {
+        if [ "$kind" = restic ]; then nice -n 19 ionice -c 3 v-backup-user-restic "$u"; else nice -n 19 ionice -c 3 v-backup-user "$u"; fi
+    }
+    run_bg "$u" "Crear copia $( [ "$kind" = restic ] && echo incremental || echo completa ) de $u" do_create
     ;;
 
 hosts)

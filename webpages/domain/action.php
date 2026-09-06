@@ -65,6 +65,9 @@ switch ($action) {
         dv_run("$bk list " . $q($owner));
     case "bk-status":
         dv_run("$bk status " . $q($owner));
+    case "bk-create":
+        $kind = (($_POST["kind"] ?? "") === "restic") ? "restic" : "full";
+        dv_run("$bk create " . $q($owner) . " $kind");
     case "bk-detail":
         dv_run("$bk detail " . $q($owner) . " " . $q($backup) . " " . $q($domain));
     case "bk-mail-accounts":
